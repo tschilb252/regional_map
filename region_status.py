@@ -8,7 +8,7 @@ Created on Tue Jan  7 06:55:24 2020
 import re
 from io import StringIO
 from datetime import datetime as dt
-from os import path
+from os import path, makedir
 from requests import get as r_get
 import folium
 import branca
@@ -259,7 +259,7 @@ def get_frcst_data(site_id):
 def get_embed(href):
     embed = (
         f'<div class="container embed-responsive embed-responsive-4by3" style="overflow: hidden; height: 650px; width: 720px;">'
-        f'<iframe class="embed-responsive-item" src="{href}" scrolling="no" frameborder="0" allowfullscreen></iframe>'
+        f'  <iframe class="embed-responsive-item" src="{href}" scrolling="no" frameborder="0" allowfullscreen></iframe>'
         f'</div>'
     )   
     return embed
@@ -420,6 +420,7 @@ if __name__ == '__main__':
     
     this_dir = path.dirname(path.realpath(__file__))
     map_dir = path.join(this_dir, 'maps')
+    makedir()
     gis_dir = path.join(this_dir, 'gis')
     
     rs_map = folium.Map(
@@ -489,6 +490,4 @@ if __name__ == '__main__':
         )
         chart_file_str = chart_file_str.replace(r'left:1%;', replace_str)
         html_file.write(chart_file_str)
-    
-    
         
