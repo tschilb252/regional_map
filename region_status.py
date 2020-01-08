@@ -265,7 +265,7 @@ def get_embed(href):
 
 def add_region_markers(rs_map, regions=regions, nrcs_url=nrcs_url, map_date=None):
     for region, region_meta in regions.items():
-        print(f'\n    Adding {region} to the map...')
+        print(f'    Adding {region} to the map...')
         swe_url = f'{nrcs_url}/WTEQ/assocHUC2/{region} Region.html'
         prec_url = f'{nrcs_url}/PREC/assocHUC2/{region} Region.html'
         swe_txt = r_get(swe_url).text
@@ -320,7 +320,7 @@ def add_region_markers(rs_map, regions=regions, nrcs_url=nrcs_url, map_date=None
 
 def add_res_markers(rs_map, reservoirs=reservoirs, map_date=None):
     for res_name, res_meta in reservoirs.items():
-        print(f'\n    Adding {res_name} to map...')
+        print(f'    Adding {res_name} to map...')
         if res_meta['region'] == 'uc':
             current_data = get_uc_data(res_meta['id'], map_date=map_date)
         elif res_meta['region'] == 'lc':
@@ -372,7 +372,7 @@ def add_res_markers(rs_map, reservoirs=reservoirs, map_date=None):
 
 def add_frcst_markers(rs_map, forecasts=forecasts, map_date=None):
     for frcst_name, frcst_meta in forecasts.items():
-        print(f'\n    Adding {frcst_name} to map...')
+        print(f'    Adding {frcst_name} to map...')
         
         if frcst_meta['region'] == 'pn':
             current_data = get_frcst_data(frcst_meta['id'], map_date=map_date)
