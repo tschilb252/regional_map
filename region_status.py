@@ -11,10 +11,9 @@ from datetime import datetime as dt
 from os import path, makedirs
 from requests import get as r_get
 import folium
-import branca
+import pandas as pd
 from folium.plugins import FloatImage, MousePosition
 from folium.features import DivIcon
-import pandas as pd
 # import geopandas as gpd
 # from shapely.geometry import Point
 # from shapely.ops import cascaded_union
@@ -117,11 +116,11 @@ forecasts = {
     }
 }
 
-def get_uc_data(sdi):
+def get_uc_data(sdi, map_date=dt.now()):
     base_url = 'https://www.usbr.gov/pn-bin/hdb/hdb.pl?svr=uchdb2'
     sdi = f'&sdi={sdi}'
     tstp = '&tstp=DY'
-    now = dt.now()
+    now = map_date
     dt_t1 = dt(now.year - 1, now.month, now.day).strftime('%Y-%m-%dT00:00')
     t1 = f'&t1={dt_t1}'
     dt_t2 = dt(now.year, now.month, now.day).strftime('%Y-%m-%dT00:00')
@@ -137,11 +136,11 @@ def get_uc_data(sdi):
         'url': request_url.replace('csv', 'html')
     }
 
-def get_lc_data(sdi):
+def get_lc_data(sdi, map_date=dt.now()):
     base_url = 'https://www.usbr.gov/pn-bin/hdb/hdb.pl?svr=lchdb2'
     sdi = f'&sdi={sdi}'
     tstp = '&tstp=DY'
-    now = dt.now()
+    now = map_date
     dt_t1 = dt(now.year - 1, now.month, now.day).strftime('%Y-%m-%dT00:00')
     t1 = f'&t1={dt_t1}'
     dt_t2 = dt(now.year, now.month, now.day).strftime('%Y-%m-%dT00:00')
@@ -157,11 +156,11 @@ def get_lc_data(sdi):
         'url': request_url.replace('csv', 'html')
     }
 
-def get_pn_data(site_id):
+def get_pn_data(site_id, map_date=dt.now()):
     base_url = 'https://www.usbr.gov/pn-bin/daily.pl'
     station = f'?station={site_id}'
     frmt = '&format=csv'
-    now = dt.now()
+    now = map_date
     dt_t1 = dt(now.year - 1, now.month, now.day)
     s_date = f'&year={dt_t1.year}&month={dt_t1.month}&day={dt_t1.day}'
     dt_t2 = dt(now.year, now.month, now.day)
@@ -177,10 +176,10 @@ def get_pn_data(site_id):
         'url': request_url.replace('csv', 'html')
     }
 
-def get_gp_data(site_id):
+def get_gp_data(site_id, map_date=dt.now()):
     base_url = 'https://www.usbr.gov/gp-bin/webarccsv.pl'
     param = f'?parameter={site_id.upper()}%20AF'
-    now = dt.now()
+    now = map_date
     dt_t1 = dt(now.year - 1, now.month, now.day)
     s_date = f'&syer={dt_t1.year}&smnth={dt_t1.month}&sdy={dt_t1.day}'
     dt_t2 = dt(now.year, now.month, now.day)
@@ -199,12 +198,12 @@ def get_gp_data(site_id):
         'url': request_url.replace('format=4', 'format=3')
     }
 
-def get_mp_data(site_id):
+def get_mp_data(site_id, map_date=dt.now()):
     base_url = 'http://cdec.water.ca.gov/dynamicapp/req/CSVDataServlet'
     station = f'?Stations={site_id.upper()}'
     sensor = '&SensorNums=15'
     duration = '&dur_code=D'
-    now = dt.now()
+    now = map_date
     t1 = dt(now.year - 1, now.month, now.day).strftime('%Y-%m-%d')
     s_date = f'&Start={t1}'
     t2 = dt(now.year, now.month, now.day).strftime('%Y-%m-%d')
@@ -223,10 +222,10 @@ def get_mp_data(site_id):
         'url': request_url
     }
 
-def get_frcst_data(site_id):
+def get_frcst_data(site_id, map_date=dt.now()):
     base_url = 'https://www.nwrfc.noaa.gov/water_supply/ws_text.cgi'
     station = f'?id={site_id.upper()}'
-    now = dt.now()
+    now = map_date
     wy = now.year
     if now.month > 9:
         wy += 1
@@ -264,9 +263,9 @@ def get_embed(href):
     )   
     return embed
 
-def add_region_markers(rs_map, regions=regions, nrcs_url=nrcs_url):
+def add_region_markers(rs_map, regions=regions, nrcs_url=nrcs_url, map_date=None):
     for region, region_meta in regions.items():
-        print(f'  Adding {region} to the map...')
+        print(f'\n    Adding {region} to the map...')
         swe_url = f'{nrcs_url}/WTEQ/assocHUC2/{region} Region.html'
         prec_url = f'{nrcs_url}/PREC/assocHUC2/{region} Region.html'
         swe_txt = r_get(swe_url).text
@@ -319,19 +318,19 @@ def add_region_markers(rs_map, regions=regions, nrcs_url=nrcs_url):
             icon=div_icon
         ).add_to(rs_map)
 
-def add_res_markers(rs_map, reservoirs=reservoirs):
+def add_res_markers(rs_map, reservoirs=reservoirs, map_date=None):
     for res_name, res_meta in reservoirs.items():
-        print(f'  Adding {res_name} to map...')
+        print(f'\n    Adding {res_name} to map...')
         if res_meta['region'] == 'uc':
-            current_data = get_uc_data(res_meta['id'])
+            current_data = get_uc_data(res_meta['id'], map_date=map_date)
         elif res_meta['region'] == 'lc':
-            current_data = get_lc_data(res_meta['id'])
+            current_data = get_lc_data(res_meta['id'], map_date=map_date)
         elif res_meta['region'] == 'pn':
-            current_data = get_pn_data(res_meta['id'])
+            current_data = get_pn_data(res_meta['id'], map_date=map_date)
         elif res_meta['region'] == 'gp':
-            current_data = get_gp_data(res_meta['id'])
+            current_data = get_gp_data(res_meta['id'], map_date=map_date)
         elif res_meta['region'] == 'mp':
-            current_data = get_mp_data(res_meta['id'])
+            current_data = get_mp_data(res_meta['id'], map_date=map_date)
         else:
             current_data = None
         
@@ -371,12 +370,12 @@ def add_res_markers(rs_map, reservoirs=reservoirs):
             icon=div_icon
         ).add_to(rs_map)
 
-def add_frcst_markers(rs_map, forecasts=forecasts):
+def add_frcst_markers(rs_map, forecasts=forecasts, map_date=None):
     for frcst_name, frcst_meta in forecasts.items():
-        print(f'  Adding {frcst_name} to map...')
+        print(f'\n    Adding {frcst_name} to map...')
         
         if frcst_meta['region'] == 'pn':
-            current_data = get_frcst_data(frcst_meta['id'])
+            current_data = get_frcst_data(frcst_meta['id'], map_date=map_date)
         else:
             current_data = None
         
@@ -417,10 +416,47 @@ def add_frcst_markers(rs_map, forecasts=forecasts):
         ).add_to(rs_map)
         
 if __name__ == '__main__':
+    import argparse
+    cli_desc = 'Creates West-Wide Summary map for USBR.'
+    parser = argparse.ArgumentParser(description=cli_desc)
+    parser.add_argument("-V", "--version", help="show program version", action="store_true")
+    parser.add_argument("-d", "--date", help="run for specific date (YYYY-MM-DD), currently no support for region prec/swe data, only res/frcst data")
+    parser.add_argument("-o", "--output", help="set output folder")
+    parser.add_argument("-n", "--name", help="use alternate name *.html")
+    parser.add_argument("-m", "--makedir", help="create output folder if it doesn't exist", action='store_true')
+    
+    args = parser.parse_args()
+    
+    if args.version:
+        print('region_status.py v1.0')
+    map_date = dt.now()
+    if args.date:
+        try:
+            map_date = dt.strptime(args.date, "%Y-%m-%d")
+        except ValueError as err:
+            print(f'Could not parse {args.date}, using current date instead.')    
     
     this_dir = path.dirname(path.realpath(__file__))
     map_dir = path.join(this_dir, 'maps')
     makedirs(map_dir, exist_ok=True)
+    if args.output:
+        if path.exists(args.output):
+            map_dir = args.output
+        else:
+            if args.makedir:
+                try:
+                    map_dir = args.output
+                    makedirs(map_dir, exist_ok=True)
+                except Exception as err:
+                    print(f'Cannot create {args.output}, using {map_dir} instead.')
+            else:
+                print(f'{args.output} does not exist, using {map_dir} instead.')  
+    if args.name:
+        map_path = path.join(map_dir, f'{args.name}.html')
+    else:
+        map_path = path.join(map_dir, 'regional_status.html')
+        
+    print(f'Creating map here: {map_dir}')
     gis_dir = path.join(this_dir, 'gis')
     
     rs_map = folium.Map(
@@ -437,14 +473,13 @@ if __name__ == '__main__':
         left=1
     ).add_to(rs_map)
     # MousePosition(prefix="Location: ").add_to(rs_map)
-    map_path = path.join(map_dir, 'regional_status.html')
     
-    print('Adding Regional Forecast markers...')
-    add_frcst_markers(rs_map)
-    print('Adding Regional Reservoir markers...')
-    add_res_markers(rs_map)
-    print('Adding Regional PREC/SWE markers...')
-    add_region_markers(rs_map)
+    print('  Adding Regional Forecast markers...')
+    add_frcst_markers(rs_map, map_date=map_date)
+    print('  Adding Regional Reservoir markers...')
+    add_res_markers(rs_map, map_date=map_date)
+    print('  Adding Regional PREC/SWE markers...')
+    add_region_markers(rs_map, map_date=map_date)
     
     all_coords = [i['coords'] for i in reservoirs.values()]
     all_coords = all_coords + [i['coords'] for i in forecasts.values()]
@@ -491,4 +526,4 @@ if __name__ == '__main__':
         )
         chart_file_str = chart_file_str.replace(r'left:1%;', replace_str)
         html_file.write(chart_file_str)
-        
+    print(f'\nCreated map here: {map_path}')
