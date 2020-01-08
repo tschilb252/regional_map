@@ -8,7 +8,7 @@ Created on Tue Jan  7 06:55:24 2020
 import re
 from io import StringIO
 from datetime import datetime as dt
-from os import path, makedir
+from os import path, makedirs
 from requests import get as r_get
 import folium
 import branca
@@ -420,7 +420,7 @@ if __name__ == '__main__':
     
     this_dir = path.dirname(path.realpath(__file__))
     map_dir = path.join(this_dir, 'maps')
-    makedir()
+    makedirs(map_dir, exist_ok=True)
     gis_dir = path.join(this_dir, 'gis')
     
     rs_map = folium.Map(
@@ -445,6 +445,7 @@ if __name__ == '__main__':
     add_res_markers(rs_map)
     print('Adding Regional PREC/SWE markers...')
     add_region_markers(rs_map)
+    
     all_coords = [i['coords'] for i in reservoirs.values()]
     all_coords = all_coords + [i['coords'] for i in forecasts.values()]
     all_coords = all_coords + [i['coords'] for i in regions.values()]
