@@ -133,7 +133,7 @@ def get_uc_data(sdi, map_date=dt.now()):
     return {
         'data': df.iloc[-1,0], 
         'dt': df.index[-1].to_pydatetime(),
-        'url': request_url.replace('csv', 'html')
+        'url': request_url.replace('format=88', 'format=json')
     }
 
 def get_lc_data(sdi, map_date=dt.now()):
@@ -153,7 +153,7 @@ def get_lc_data(sdi, map_date=dt.now()):
     return {
         'data': df.iloc[-1,0], 
         'dt': df.index[-1].to_pydatetime(),
-        'url': request_url.replace('csv', 'html')
+        'url': request_url.replace('format=88', 'format=json')
     }
 
 def get_pn_data(site_id, map_date=dt.now()):
