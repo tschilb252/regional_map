@@ -268,15 +268,21 @@ def add_region_markers(rs_map, regions=regions, nrcs_url=nrcs_url, map_date=None
         print(f'    Adding {region} to the map...')
         swe_url = f'{nrcs_url}/WTEQ/assocHUC2/{region} Region.html'
         prec_url = f'{nrcs_url}/PREC/assocHUC2/{region} Region.html'
-        swe_txt = r_get(swe_url).text
-        prec_txt = r_get(prec_url).text
-        swe_regex = r"(?<=% of Median - )(.*)(?=%<br>%)"
-        prec_regex = r"(?<=% of Average - )(.*)(?=%<br>%)"
-    
-        swe_re = re.search(swe_regex, swe_txt, re.MULTILINE)
-        prec_re = re.search(prec_regex, prec_txt, re.MULTILINE)
-        swe_percent = swe_txt[swe_re.start():swe_re.end()]
-        prec_percent = prec_txt[prec_re.start():prec_re.end()]
+        try:
+            swe_txt = r_get(swe_url).text
+            prec_txt = r_get(prec_url).text
+            swe_regex = r"(?<=% of Median - )(.*)(?=%<br>%)"
+            prec_regex = r"(?<=% of Average - )(.*)(?=%<br>%)"
+        
+            swe_re = re.search(swe_regex, swe_txt, re.MULTILINE)
+            prec_re = re.search(prec_regex, prec_txt, re.MULTILINE)
+            swe_percent = swe_txt[swe_re.start():swe_re.end()]
+            prec_percent = prec_txt[prec_re.start():prec_re.end()]
+        except Exception as err:
+            print(f'      Error gathering data for {region} - {err}')
+            swe_percent = 'N/A'
+            prec_percent = 'N/A'
+            
         seasonal_url = swe_url
         other_season_url = prec_url
         other_chart_type = 'Precip.'
@@ -289,7 +295,7 @@ def add_region_markers(rs_map, regions=regions, nrcs_url=nrcs_url, map_date=None
                 f'<div class="container">'
                 f'<div class="row justify-content-center">'
                 f'<div class="col">'
-                f'<a href="{prec_url}" target="_blank">'
+                f'<a href="{other_season_url}" target="_blank">'
                 f'<button class="btn btn-primary btn-sm btn-block">'
                 f'Go to {region} {other_chart_type} Chart...</button></a></div>'
                 f'<div class="row justify-content-center">{get_embed(seasonal_url)}</div>'
@@ -321,28 +327,35 @@ def add_region_markers(rs_map, regions=regions, nrcs_url=nrcs_url, map_date=None
 def add_res_markers(rs_map, reservoirs=reservoirs, map_date=None):
     for res_name, res_meta in reservoirs.items():
         print(f'    Adding {res_name} to map...')
-        if res_meta['region'] == 'uc':
-            current_data = get_uc_data(res_meta['id'], map_date=map_date)
-        elif res_meta['region'] == 'lc':
-            current_data = get_lc_data(res_meta['id'], map_date=map_date)
-        elif res_meta['region'] == 'pn':
-            current_data = get_pn_data(res_meta['id'], map_date=map_date)
-        elif res_meta['region'] == 'gp':
-            current_data = get_gp_data(res_meta['id'], map_date=map_date)
-        elif res_meta['region'] == 'mp':
-            current_data = get_mp_data(res_meta['id'], map_date=map_date)
-        else:
+        try:
+            if res_meta['region'] == 'uc':
+                current_data = get_uc_data(res_meta['id'], map_date=map_date)
+            elif res_meta['region'] == 'lc':
+                current_data = get_lc_data(res_meta['id'], map_date=map_date)
+            elif res_meta['region'] == 'pn':
+                current_data = get_pn_data(res_meta['id'], map_date=map_date)
+            elif res_meta['region'] == 'gp':
+                current_data = get_gp_data(res_meta['id'], map_date=map_date)
+            elif res_meta['region'] == 'mp':
+                current_data = get_mp_data(res_meta['id'], map_date=map_date)
+            else:
+                current_data = None
+        except Exception as err:
+            print(f'      Error gathering data for {res_name} - {err}')
             current_data = None
-        
+                
         if current_data:
             percent_cap = 100 * round(current_data['data'] / (1000 * res_meta['cap']), 2)
             percent_cap = f'{percent_cap:0.0f}'
             tooltip = f"As of: {current_data['dt'].strftime('%x')}"
+            anno = res_meta['anno']
+            url = current_data['url']
         else:
             percent_cap = 'N/A'
             tooltip = 'Error retrieving data!'
-        anno = res_meta['anno']
-        url = current_data['url']
+            anno = ''
+            url = ''
+            
         marker_label = f'''
         <a href="{url}" target="_blank">
           <button type="button" class="btn btn-sm btn-info">
@@ -374,20 +387,27 @@ def add_frcst_markers(rs_map, forecasts=forecasts, map_date=None):
     for frcst_name, frcst_meta in forecasts.items():
         print(f'    Adding {frcst_name} to map...')
         
-        if frcst_meta['region'] == 'pn':
-            current_data = get_frcst_data(frcst_meta['id'], map_date=map_date)
-        else:
+        try:
+            if frcst_meta['region'] == 'pn':
+                current_data = get_frcst_data(frcst_meta['id'], map_date=map_date)
+            else:
+                current_data = None
+        except Exception as err:
+            print(f'      Error gathering data for {frcst_name} - {err}')
             current_data = None
-        
+                
         if current_data:
             percent_cap = 100 * round(current_data['data'] / (frcst_meta['avg']), 2)
             percent_cap = f'{percent_cap:0.0f}'
             tooltip = f"As of: {current_data['dt'].strftime('%x')}"
+            anno = frcst_meta['anno']    
+            url = current_data['url']
         else:
             percent_cap = 'N/A'
             tooltip = 'Error retrieving data!'         
-        anno = frcst_meta['anno']    
-        url = current_data['url']
+            anno = ''
+            url = ''
+            
         marker_label = f'''
         <a href="{url}" target="_blank">
           <button type="button" class="btn btn-sm btn-info">
@@ -434,7 +454,7 @@ if __name__ == '__main__':
         try:
             map_date = dt.strptime(args.date, "%Y-%m-%d")
         except ValueError as err:
-            print(f'Could not parse {args.date}, using current date instead.')    
+            print(f'Could not parse {args.date}, using current date instead. - {err}')    
     
     this_dir = path.dirname(path.realpath(__file__))
     map_dir = path.join(this_dir, 'maps')
@@ -448,7 +468,7 @@ if __name__ == '__main__':
                     map_dir = args.output
                     makedirs(map_dir, exist_ok=True)
                 except Exception as err:
-                    print(f'Cannot create {args.output}, using {map_dir} instead.')
+                    print(f'Cannot create {args.output}, using {map_dir} instead. - {err}')
             else:
                 print(f'{args.output} does not exist, using {map_dir} instead.')  
     if args.name:
