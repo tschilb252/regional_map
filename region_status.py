@@ -35,6 +35,7 @@ folium.folium._default_css = default_css
 # folium.folium._default_css = bor_css
 
 nrcs_url = 'https://www.nrcs.usda.gov/Internet/WCIS/basinCharts/POR'
+
 regions = {
     'Arkansas-White-Red': {
         'coords': [37, -103]
@@ -115,6 +116,31 @@ forecasts = {
         'coords': [45.604048, -121.173913], 'region': 'pn', 'anno': 1, 'avg': 87532, 'id': 'TDAO3'
     }
 }
+
+def get_legend():
+    update_date = dt.now().strftime('%B %d, %Y')
+    legend_html = f'''
+    <div style="position: fixed; bottom: 205px; left: 30px; z-index:9999; font-size:26px;">
+      <b>Reclamation West-Wide Summary</b><br>
+    </div>
+    <div style="position: fixed; bottom: 180px; left: 30px; z-index:9999; font-size:22px;">
+        Precipitation and Storage Figures<br>
+    </div>
+    <div style="position: fixed; bottom: 30px; left: 30px; z-index:9999; font-size:13px;">
+      <sup>1</sup>Storage percent of capacity more sensitive to seasonal flows<br>
+      <sup>2</sup>Storage percent of capacity less sensitive to seasonal flows<br>
+      <i class="fa fa-umbrella"></i>&nbsp Water year-to-date precipitation (precip) provided as % of average<br>
+      <i class="fa fa-snowflake-o"></i>&nbsp Snow water equivalent (snow) provided as % of median<br>
+      <i class="fa fa-tint"></i>&nbsp Reservoir storage provided as percentage of capacity<br>
+      <i class="fa fa-tachometer"></i>&nbsp Forecast volumes provided as percentage of 30-yr average<br>
+      Precipitation, SWE, and reservoir data available from 
+      <a href="https://www.wcc.nrcs.usda.gov/">NRCS</a>/
+      <a href="https://www.usbr.gov/">BOR</a>/
+      <a href="https://cdec.water.ca.gov/">CDEC</a><br>
+      Updated as of {update_date}
+    </div>
+    '''
+    return legend_html
 
 def get_uc_data(sdi, map_date=dt.now()):
     base_url = 'https://www.usbr.gov/pn-bin/hdb/hdb.pl?svr=uchdb2'
@@ -481,8 +507,8 @@ if __name__ == '__main__':
     
     rs_map = folium.Map(
             tiles=None,
-            location=[39.5, -110],
-            zoom_start=5.5
+            # location=[39.5, -110],
+            # zoom_start=5.5
         )
     add_huc_layer(rs_map, 2)
     add_optional_tilesets(rs_map)
@@ -505,30 +531,9 @@ if __name__ == '__main__':
     all_coords = all_coords + [i['coords'] for i in forecasts.values()]
     all_coords = all_coords + [i['coords'] for i in regions.values()]
     rs_map.fit_bounds(all_coords)
-    update_date = dt.now().strftime('%B %d, %Y')
-    footer_html = f'''
-    <div style="position: fixed; bottom: 205px; left: 30px; z-index:9999; font-size:26px;">
-      <b>Reclamation West-Wide Summary</b><br>
-    </div>
-    <div style="position: fixed; bottom: 180px; left: 30px; z-index:9999; font-size:22px;">
-        Precipitation and Storage Figures<br>
-    </div>
-    <div style="position: fixed; bottom: 30px; left: 30px; z-index:9999; font-size:13px;">
-      <sup>1</sup>Storage percent of capacity more sensitive to seasonal flows<br>
-      <sup>2</sup>Storage percent of capacity less sensitive to seasonal flows<br>
-      <i class="fa fa-umbrella"></i>&nbsp Water year-to-date precipitation (precip) provided as % of average<br>
-      <i class="fa fa-snowflake-o"></i>&nbsp Snow water equivalent (snow) provided as % of median<br>
-      <i class="fa fa-tint"></i>&nbsp Reservoir storage provided as percentage of capacity<br>
-      <i class="fa fa-tachometer"></i>&nbsp Forecast volumes provided as percentage of 30-yr average<br>
-      Precipitation, SWE, and reservoir data available from 
-      <a href="https://www.wcc.nrcs.usda.gov/">NRCS</a>/
-      <a href="https://www.usbr.gov/">BOR</a>/
-      <a href="https://cdec.water.ca.gov/">CDEC</a><br>
-      Updated as of {update_date}
-    </div>
-    '''
-    footer = folium.Element(footer_html)
-    rs_map.get_root().html.add_child(footer)
+
+    legend = folium.Element(get_legend())
+    rs_map.get_root().html.add_child(legend)
     rs_map.save(map_path)
     flavicon = (
         f'<link rel="shortcut icon" '
