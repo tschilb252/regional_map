@@ -6,11 +6,13 @@ Created on Tue Jan  7 06:55:24 2020
 """
 
 import re
+import json
 from io import StringIO
 from datetime import datetime as dt
 from os import path, makedirs
 from requests import get as r_get
 import folium
+import branca
 import pandas as pd
 from folium.plugins import FloatImage, MousePosition
 from folium.features import DivIcon
@@ -38,28 +40,28 @@ nrcs_url = 'https://www.nrcs.usda.gov/Internet/WCIS/basinCharts/POR'
 
 regions = {
     'Arkansas-White-Red': {
-        'coords': [37, -103]
+        'coords': [37, -103], 'level': 2,
     }, 
     'California': {
-        'coords': [37.5, -123.5]
+        'coords': [37.5, -123.5], 'level': 2,
     },
     'Great Basin': {
-        'coords': [40.75, -117]
+        'coords': [40.75, -117], 'level': 2,
     },
     'Lower Colorado': {
-        'coords': [35, -113]
+        'coords': [35, -113], 'level': 2,
     },
     'Missouri': {
-        'coords': [46.7, -106.2]
+        'coords': [46.7, -106.2], 'level': 2,
     },
     'Pacific Northwest': {
-        'coords': [45, -117.5]
+        'coords': [45, -117.5], 'level': 2,
     },
     'Rio Grande':{
-        'coords': [35.2, -107.7]
+        'coords': [35.2, -107.7], 'level': 2,
     },
     'Upper Colorado': {
-        'coords': [39.5, -110.7]
+        'coords': [39.5, -110.7], 'level': 2,
     }
 }
 
@@ -117,16 +119,99 @@ forecasts = {
     }
 }
 
+colorscale = branca.colormap.LinearColormap(['red', 'yellow', 'green', 'blue'], index=[50, 70, 100, 150])
+
+def get_nrcs_basin_stat(basin_name, huc_level='2', data_type='wteq'):
+    stat_type_dict = {'wteq': 'Median', 'prec': 'Average'}
+    url = f'{nrcs_url}/{data_type.upper()}/assocHUC{huc_level}/{basin_name}.html'
+    try:
+        response = r_get(url)
+        if not response.status_code == 200:
+            print(f'      Skipping {basin_name} {data_type.upper()}, NRCS does not publish stats.')
+            return 'N/A'
+        html_txt = response.text
+        stat_type = stat_type_dict.get(data_type, 'Median')
+        regex = f"(?<=% of {stat_type} - )(.*)(?=%<br>%)"
+        swe_re = re.search(regex, html_txt, re.MULTILINE)
+        stat = html_txt[swe_re.start():swe_re.end()]
+    except Exception as err:
+        print(f'      Error gathering data for {basin_name} - {err}')
+        stat = 'N/A'
+    return stat
+    
+def get_huc_nrcs_stats(huc_level='6'):
+    topo_json_path = f'./gis/HUC{huc_level}.topojson'
+    with open(topo_json_path, 'r') as tj:
+        topo_json = json.load(tj)
+    huc_str = f'HUC{huc_level}'
+    attrs = topo_json['objects'][huc_str]['geometries']
+    for attr in attrs:
+        props = attr['properties']
+        huc_name = props['Name']
+        print(f'  Getting NRCS stats for {huc_name}...')
+        props['swe_percent'] = get_nrcs_basin_stat(
+            huc_name, huc_level=huc_level, data_type='wteq'
+        )
+        props['prec_percent'] = get_nrcs_basin_stat(
+            huc_name, huc_level=huc_level, data_type='prec'
+        )
+    topo_json['objects'][huc_str]['geometries'] = attrs
+    with open(topo_json_path, 'w') as tj:
+        json.dump(topo_json, tj)
+
+def style_chropleth(feature):
+    stat_value = feature['properties'].get('swe_percent', 'N/A')
+    if stat_value == 'N/A':
+        fill_opacity = 0
+    else:
+        stat_value = float(stat_value)
+        fill_opacity = (abs(stat_value - 100)) / 100
+    return {
+        'fillOpacity': 0.75 if fill_opacity > 0.75 else fill_opacity,
+        'weight': 0,
+        'fillColor': '#00FFFFFF' if stat_value == 'N/A' else colorscale(stat_value)
+    }
+
+def add_huc_chropleth(m, data_type='swe', show=True, huc_level='6', gis_path='gis'):
+    huc_str = f'HUC{huc_level}'
+    topo_json_path = path.join(gis_path, f'{huc_str}.topojson')
+    stat_type_dict = {'swe': 'Median', 'prec': 'Average'}
+    stat_type = stat_type_dict.get(data_type, '')
+    layer_name = f'% {stat_type} {data_type.upper()}'
+    with open(topo_json_path, 'r') as tj:
+        topo_json = json.load(tj)
+    folium.TopoJson(
+        topo_json,
+        f'objects.{huc_str}',
+        name=layer_name,
+        show=show,
+        style_function=style_chropleth,
+        tooltip=folium.features.GeoJsonTooltip(
+            ['Name', f'{data_type}_percent'],
+            aliases=['Basin Name:', f'{layer_name}:'])
+    ).add_to(m)
+    
+def get_dev_link():
+    dev_link = '''
+    <div style="position: fixed; top: 10px; right: 90px; z-index:9999;">
+      <a class="btn btn-danger btn-sm" href="./regional_status_dev.html" role="button">
+        Link to dev map.
+      </a>
+    </div>
+    '''
+    return dev_link
+
 def get_legend():
     update_date = dt.now().strftime('%B %d, %Y')
     legend_html = f'''
-    <div style="position: fixed; bottom: 205px; left: 30px; z-index:9999; font-size:26px;">
+  <div>
+    <div style="position: fixed; bottom: 205px; left: 30px; z-index:9999; font-size:x-large;">
       <b>Reclamation West-Wide Summary</b><br>
     </div>
-    <div style="position: fixed; bottom: 180px; left: 30px; z-index:9999; font-size:22px;">
+    <div style="position: fixed; bottom: 185px; left: 35px; z-index:9999; font-size:medium;">
         Precipitation and Storage Figures<br>
     </div>
-    <div style="position: fixed; bottom: 30px; left: 30px; z-index:9999; font-size:13px;">
+    <div style="position: fixed; bottom: 30px; left: 40px; z-index:9999; font-size:small;">
       <sup>1</sup>Storage percent of capacity more sensitive to seasonal flows<br>
       <sup>2</sup>Storage percent of capacity less sensitive to seasonal flows<br>
       <i class="fa fa-umbrella"></i>&nbsp Water year-to-date precipitation (precip) provided as % of average<br>
@@ -139,6 +224,7 @@ def get_legend():
       <a href="https://cdec.water.ca.gov/">CDEC</a><br>
       Updated as of {update_date}
     </div>
+  </div>
     '''
     return legend_html
 
@@ -292,23 +378,18 @@ def get_embed(href):
 def add_region_markers(rs_map, regions=regions, nrcs_url=nrcs_url, map_date=None):
     for region, region_meta in regions.items():
         print(f'    Adding {region} to the map...')
-        swe_url = f'{nrcs_url}/WTEQ/assocHUC2/{region} Region.html'
-        prec_url = f'{nrcs_url}/PREC/assocHUC2/{region} Region.html'
-        try:
-            swe_txt = r_get(swe_url).text
-            prec_txt = r_get(prec_url).text
-            swe_regex = r"(?<=% of Median - )(.*)(?=%<br>%)"
-            prec_regex = r"(?<=% of Average - )(.*)(?=%<br>%)"
-        
-            swe_re = re.search(swe_regex, swe_txt, re.MULTILINE)
-            prec_re = re.search(prec_regex, prec_txt, re.MULTILINE)
-            swe_percent = swe_txt[swe_re.start():swe_re.end()]
-            prec_percent = prec_txt[prec_re.start():prec_re.end()]
-        except Exception as err:
-            print(f'      Error gathering data for {region} - {err}')
-            swe_percent = 'N/A'
-            prec_percent = 'N/A'
-            
+        basin_name = region
+        huc_level = region_meta['level']
+        if str(huc_level) == '2':
+            basin_name = f'{region} Region'
+        swe_percent = get_nrcs_basin_stat(
+            basin_name, huc_level=huc_level, data_type='wteq'
+        )
+        prec_percent = get_nrcs_basin_stat(
+            basin_name, huc_level=huc_level, data_type='prec'
+        )
+        swe_url = f'{nrcs_url}/WTEQ/assocHUC{huc_level}/{basin_name}.html'
+        prec_url = f'{nrcs_url}/PREC/assocHUC{huc_level}/{basin_name}.html'
         seasonal_url = swe_url
         other_season_url = prec_url
         other_chart_type = 'Precip.'
@@ -330,7 +411,7 @@ def add_region_markers(rs_map, regions=regions, nrcs_url=nrcs_url, map_date=None
         popup = folium.map.Popup(html=popup_html)
             
         marker_label = f'''
-        <button type="button" class="btn btn-primary">
+        <button type="button" class="btn btn-primary btn-md">
           <span style="white-space: nowrap;">{region}</span><br>
           <span style="white-space: nowrap;">
             {prec_percent}% <i class="fa fa-umbrella"></i>
@@ -462,6 +543,7 @@ def add_frcst_markers(rs_map, forecasts=forecasts, map_date=None):
         ).add_to(rs_map)
         
 if __name__ == '__main__':
+
     import argparse
     cli_desc = 'Creates West-Wide Summary map for USBR.'
     parser = argparse.ArgumentParser(description=cli_desc)
@@ -482,6 +564,9 @@ if __name__ == '__main__':
         except ValueError as err:
             print(f'Could not parse {args.date}, using current date instead. - {err}')    
     
+    # huc2 = get_huc_nrcs_stats(2)
+    # huc6 = get_huc_nrcs_stats(6)
+    
     this_dir = path.dirname(path.realpath(__file__))
     map_dir = path.join(this_dir, 'maps')
     makedirs(map_dir, exist_ok=True)
@@ -500,7 +585,8 @@ if __name__ == '__main__':
     if args.name:
         map_path = path.join(map_dir, f'{args.name}.html')
     else:
-        map_path = path.join(map_dir, 'regional_status.html')
+        # map_path = path.join(map_dir, 'regional_status.html')
+        map_path = path.join(map_dir, 'regional_status_dev.html')
         
     print(f'Creating map here: {map_dir}')
     gis_dir = path.join(this_dir, 'gis')
@@ -511,6 +597,12 @@ if __name__ == '__main__':
             # zoom_start=5.5
         )
     add_huc_layer(rs_map, 2)
+    add_huc_chropleth(
+        rs_map, data_type='swe', show=True, huc_level='6', gis_path='gis'
+    )
+    add_huc_chropleth(
+        rs_map, data_type='prec', show=False, huc_level='6', gis_path='gis'
+    )
     add_optional_tilesets(rs_map)
     folium.LayerControl().add_to(rs_map)
     FloatImage(
@@ -534,6 +626,10 @@ if __name__ == '__main__':
 
     legend = folium.Element(get_legend())
     rs_map.get_root().html.add_child(legend)
+    
+    dev_link = folium.Element(get_dev_link())
+    rs_map.get_root().html.add_child(dev_link)
+    
     rs_map.save(map_path)
     flavicon = (
         f'<link rel="shortcut icon" '
@@ -545,9 +641,9 @@ if __name__ == '__main__':
     with open(map_path, 'w') as html_file:
         chart_file_str = chart_file_str.replace(r'</head>', flavicon)
         replace_str = (
-            '''left:1%;
-                    max-width:20%;
-                    max-height:20%;'''
+            '''left:40px; top:10px; max-width:15%; max-height:15%;
+                background-color:rgba(255,255,255,0.5);
+                border-radius: 10px; padding: 10px;'''
         )
         chart_file_str = chart_file_str.replace(r'left:1%;', replace_str)
         html_file.write(chart_file_str)
