@@ -585,8 +585,8 @@ if __name__ == '__main__':
     if args.name:
         map_path = path.join(map_dir, f'{args.name}.html')
     else:
-        # map_path = path.join(map_dir, 'regional_status.html')
-        map_path = path.join(map_dir, 'regional_status_dev.html')
+        map_path = path.join(map_dir, 'regional_status.html')
+        # map_path = path.join(map_dir, 'regional_status_dev.html')
         
     print(f'Creating map here: {map_dir}')
     gis_dir = path.join(this_dir, 'gis')
