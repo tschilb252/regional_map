@@ -597,12 +597,12 @@ if __name__ == '__main__':
             # zoom_start=5.5
         )
     add_huc_layer(rs_map, 2)
-    add_huc_chropleth(
-        rs_map, data_type='swe', show=True, huc_level='6', gis_path='gis'
-    )
-    add_huc_chropleth(
-        rs_map, data_type='prec', show=False, huc_level='6', gis_path='gis'
-    )
+    # add_huc_chropleth(
+    #     rs_map, data_type='swe', show=True, huc_level='6', gis_path='gis'
+    # )
+    # add_huc_chropleth(
+    #     rs_map, data_type='prec', show=False, huc_level='6', gis_path='gis'
+    # )
     add_optional_tilesets(rs_map)
     folium.LayerControl().add_to(rs_map)
     FloatImage(
