@@ -5,14 +5,20 @@ Created on Fri Sep 13 15:26:04 2019
 @author: buriona
 """
 
+import re
+import json
 from os import path
+import branca
 import folium
 import pandas as pd
 # import geopandas as gpd
 from shapely.geometry import Point
 from datetime import datetime
+from requests import get as r_get
 
 STATIC_URL = f'https://www.usbr.gov/uc/water/hydrodata/assets'
+NRCS_URL = r'https://www.nrcs.usda.gov/Internet/WCIS/basinCharts/POR'
+GIS_URL = r'https://www.usbr.gov/uc/water/hydrodata/assets/gis'
 
 def get_plotly_js():
     return f'{STATIC_URL}/plotly.js'
@@ -175,16 +181,22 @@ def add_optional_tilesets(folium_map):
     for name, tileset in tilesets.items():
         folium.TileLayer(tileset, name=name).add_to(folium_map)
 
-def add_huc_layer(huc_map, level=2, huc_geojson_path=None, embed=False):
+def add_huc_layer(huc_map, level=2, huc_geojson_path=None, embed=False, show=True, filter_on=None):
     try:
+        weight = -0.25 * float(level) + 2.5
         if not huc_geojson_path:
             huc_geojson_path = f'{STATIC_URL}/gis/HUC{level}.geojson'
-        huc_style = lambda x: {
-            'fillColor': '#ffffff00', 'color': '#1f1f1faa', 'weight': 2
-        }
-        show = False
-        if level == 2:
-            show = True
+        else:
+            embed = True
+        if filter_on:
+           huc_style = lambda x: {
+            'fillColor': '#ffffff00', 'color': '#1f1f1faa', 
+            'weight': weight if x['properties'][f'HUC{level}'][:len(filter_on)] == filter_on else 0
+        } 
+        else:
+            huc_style = lambda x: {
+                'fillColor': '#ffffff00', 'color': '#1f1f1faa', 'weight': weight
+            }
         folium.GeoJson(
             huc_geojson_path,
             name=f'HUC {level}',
@@ -249,5 +261,112 @@ def get_season():
         return 'fall'
     return 'winter'
 
+def get_nrcs_basin_stat(basin_name, huc_level='2', data_type='wteq'):
+    stat_type_dict = {'wteq': 'Median', 'prec': 'Average'}
+    url = f'{NRCS_URL}/{data_type.upper()}/assocHUC{huc_level}/{basin_name}.html'
+    try:
+        response = r_get(url)
+        if not response.status_code == 200:
+            print(f'      Skipping {basin_name} {data_type.upper()}, NRCS does not publish stats.')
+            return 'N/A'
+        html_txt = response.text
+        stat_type = stat_type_dict.get(data_type, 'Median')
+        regex = f"(?<=% of {stat_type} - )(.*)(?=%<br>%)"
+        swe_re = re.search(regex, html_txt, re.MULTILINE)
+        stat = html_txt[swe_re.start():swe_re.end()]
+    except Exception as err:
+        print(f'      Error gathering data for {basin_name} - {err}')
+        stat = 'N/A'
+    return stat
+    
+def get_huc_nrcs_stats(huc_level='6'):
+    topo_json_path = f'./gis/HUC{huc_level}.topojson'
+    with open(topo_json_path, 'r') as tj:
+        topo_json = json.load(tj)
+    huc_str = f'HUC{huc_level}'
+    attrs = topo_json['objects'][huc_str]['geometries']
+    for attr in attrs:
+        props = attr['properties']
+        huc_name = props['Name']
+        print(f'  Getting NRCS stats for {huc_name}...')
+        props['swe_percent'] = get_nrcs_basin_stat(
+            huc_name, huc_level=huc_level, data_type='wteq'
+        )
+        props['prec_percent'] = get_nrcs_basin_stat(
+            huc_name, huc_level=huc_level, data_type='prec'
+        )
+    topo_json['objects'][huc_str]['geometries'] = attrs
+    with open(topo_json_path, 'w') as tj:
+        json.dump(topo_json, tj)
+
+def style_swe_chropleth(feature):
+    colormap = get_colormap()
+    stat_value = feature['properties'].get('swe_percent', 'N/A')
+    if stat_value == 'N/A':
+        fill_opacity = 0
+    else:
+        stat_value = float(stat_value)
+        fill_opacity = (abs(stat_value - 100)) / 100 + 0.1
+    return {
+        'fillOpacity': 0.75 if fill_opacity > 0.75 else fill_opacity,
+        'weight': 0,
+        'fillColor': '#00000000' if stat_value == 'N/A' else colormap(stat_value)
+    }
+
+def style_prec_chropleth(feature):
+    colormap = get_colormap()
+    stat_value = feature['properties'].get('swe_percent', 'N/A')
+    if stat_value == 'N/A':
+        fill_opacity = 0
+    else:
+        stat_value = float(stat_value)
+        fill_opacity = (abs(stat_value - 100)) / 100 + 0.1
+    return {
+        'fillOpacity': 0.75 if fill_opacity > 0.75 else fill_opacity,
+        'weight': 0,
+        'fillColor': '#00000000' if stat_value == 'N/A' else colormap(stat_value)
+    }
+
+def add_huc_chropleth(m, data_type='swe', show=True, huc_level='6', gis_path='gis'):
+    huc_str = f'HUC{huc_level}'
+    # topo_json_path = path.join(gis_path, f'{huc_str}.topojson')
+    topo_json_path = f'{GIS_URL}/{huc_str}.topojson'
+    stat_type_dict = {'swe': 'Median', 'prec': 'Average'}
+    stat_type = stat_type_dict.get(data_type, '')
+    layer_name = f'% {stat_type} {data_type.upper()}'
+    with r_get(topo_json_path) as tj:
+        topo_json = tj.json()
+    style_chropleth_dict = {
+        'swe': style_swe_chropleth, 'prec': style_prec_chropleth
+    }
+    folium.TopoJson(
+        topo_json,
+        f'objects.{huc_str}',
+        name=layer_name,
+        show=show,
+        style_function=style_chropleth_dict[data_type],
+        tooltip=folium.features.GeoJsonTooltip(
+            ['Name', f'{data_type}_percent'],
+            aliases=['Basin Name:', f'{layer_name}:'])
+    ).add_to(m)
+
+def get_colormap(low=50, high=150):
+    # colormap = branca.colormap.linear.RdYlBu_09.scale(low, high)
+    colormap = branca.colormap.LinearColormap(
+        # colors=['red','yellow','green','blue', 'purple'],
+        colors=[
+            (255,51,51,150), 
+            (255,255,51,150), 
+            (51,255,51,150), 
+            (51,153,255,150), 
+            (153,51,255,150)
+        ], 
+        index=[50, 75, 100, 125, 150], 
+        vmin=50,
+        vmax=150
+    )
+    colormap.caption = '% of Average Precipitation or % Median Snow Water Equivalent'
+    return colormap
+   
 if __name__ == '__main__':
     print('Just a utility module')

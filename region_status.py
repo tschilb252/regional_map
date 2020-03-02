@@ -5,8 +5,6 @@ Created on Tue Jan  7 06:55:24 2020
 @author: buriona
 """
 
-import re
-import json
 from io import StringIO
 from datetime import datetime as dt
 from os import path, makedirs
@@ -14,7 +12,7 @@ from requests import get as r_get
 import folium
 import branca
 import pandas as pd
-from folium.plugins import FloatImage, MousePosition
+from folium.plugins import FloatImage
 from folium.features import DivIcon
 # import geopandas as gpd
 # from shapely.geometry import Point
@@ -22,8 +20,10 @@ from folium.features import DivIcon
 from region_status_utils import get_fa_icon, get_icon_color, get_season
 from region_status_utils import add_optional_tilesets, add_huc_layer, get_huc
 from region_status_utils import get_favicon, get_bor_seal
-from region_status_utils import get_bor_js, get_bor_css
+from region_status_utils import get_bor_js, get_bor_css, NRCS_URL
 from region_status_utils import get_default_js, get_default_css
+from region_status_utils import get_nrcs_basin_stat, add_huc_chropleth
+from region_status_utils import get_huc_nrcs_stats, get_colormap
 
 bor_js = get_bor_js()
 bor_css = get_bor_css()
@@ -35,8 +35,6 @@ folium.folium._default_js = default_js
 folium.folium._default_css = default_css
 # folium.folium._default_js = bor_js
 # folium.folium._default_css = bor_css
-
-nrcs_url = 'https://www.nrcs.usda.gov/Internet/WCIS/basinCharts/POR'
 
 regions = {
     'Arkansas-White-Red': {
@@ -118,78 +116,6 @@ forecasts = {
         'coords': [45.604048, -121.173913], 'region': 'pn', 'anno': 1, 'avg': 87532, 'id': 'TDAO3'
     }
 }
-
-colorscale = branca.colormap.LinearColormap(['red', 'yellow', 'green', 'blue'], index=[50, 70, 100, 150])
-
-def get_nrcs_basin_stat(basin_name, huc_level='2', data_type='wteq'):
-    stat_type_dict = {'wteq': 'Median', 'prec': 'Average'}
-    url = f'{nrcs_url}/{data_type.upper()}/assocHUC{huc_level}/{basin_name}.html'
-    try:
-        response = r_get(url)
-        if not response.status_code == 200:
-            print(f'      Skipping {basin_name} {data_type.upper()}, NRCS does not publish stats.')
-            return 'N/A'
-        html_txt = response.text
-        stat_type = stat_type_dict.get(data_type, 'Median')
-        regex = f"(?<=% of {stat_type} - )(.*)(?=%<br>%)"
-        swe_re = re.search(regex, html_txt, re.MULTILINE)
-        stat = html_txt[swe_re.start():swe_re.end()]
-    except Exception as err:
-        print(f'      Error gathering data for {basin_name} - {err}')
-        stat = 'N/A'
-    return stat
-    
-def get_huc_nrcs_stats(huc_level='6'):
-    topo_json_path = f'./gis/HUC{huc_level}.topojson'
-    with open(topo_json_path, 'r') as tj:
-        topo_json = json.load(tj)
-    huc_str = f'HUC{huc_level}'
-    attrs = topo_json['objects'][huc_str]['geometries']
-    for attr in attrs:
-        props = attr['properties']
-        huc_name = props['Name']
-        print(f'  Getting NRCS stats for {huc_name}...')
-        props['swe_percent'] = get_nrcs_basin_stat(
-            huc_name, huc_level=huc_level, data_type='wteq'
-        )
-        props['prec_percent'] = get_nrcs_basin_stat(
-            huc_name, huc_level=huc_level, data_type='prec'
-        )
-    topo_json['objects'][huc_str]['geometries'] = attrs
-    with open(topo_json_path, 'w') as tj:
-        json.dump(topo_json, tj)
-
-def style_chropleth(feature):
-    stat_value = feature['properties'].get('swe_percent', 'N/A')
-    if stat_value == 'N/A':
-        fill_opacity = 0
-    else:
-        stat_value = float(stat_value)
-        fill_opacity = (abs(stat_value - 100)) / 100
-    return {
-        'fillOpacity': 0.75 if fill_opacity > 0.75 else fill_opacity,
-        'weight': 0,
-        'fillColor': '#00FFFFFF' if stat_value == 'N/A' else colorscale(stat_value)
-    }
-
-def add_huc_chropleth(m, data_type='swe', show=True, huc_level='6', gis_path='gis'):
-    huc_str = f'HUC{huc_level}'
-    topo_json_path = path.join(gis_path, f'{huc_str}.topojson')
-    stat_type_dict = {'swe': 'Median', 'prec': 'Average'}
-    stat_type = stat_type_dict.get(data_type, '')
-    layer_name = f'% {stat_type} {data_type.upper()}'
-    with open(topo_json_path, 'r') as tj:
-        topo_json = json.load(tj)
-    folium.TopoJson(
-        topo_json,
-        f'objects.{huc_str}',
-        name=layer_name,
-        show=show,
-        style_function=style_chropleth,
-        tooltip=folium.features.GeoJsonTooltip(
-            ['Name', f'{data_type}_percent'],
-            aliases=['Basin Name:', f'{layer_name}:'])
-    ).add_to(m)
     
 def get_dev_link():
     dev_link = '''
@@ -239,7 +165,10 @@ def get_uc_data(sdi, map_date=dt.now()):
     t2 = f'&t2={dt_t2}'
     suffix= '&table=R&mrid=0&format=88'
     request_url = f'{base_url}{sdi}{tstp}{t1}{t2}{suffix}'
-    df = pd.read_csv(request_url, index_col='Date', parse_dates=True)
+    response = StringIO(r_get(request_url).text)
+    df = pd.read_csv(
+        response, index_col='Date', parse_dates=True
+    )
     df = df.astype(float)
     df.dropna(inplace=True)
     return {
@@ -259,7 +188,10 @@ def get_lc_data(sdi, map_date=dt.now()):
     t2 = f'&t2={dt_t2}'
     suffix= '&table=R&mrid=0&format=88'
     request_url = f'{base_url}{sdi}{tstp}{t1}{t2}{suffix}'
-    df = pd.read_csv(request_url, index_col='Date', parse_dates=True)
+    response = StringIO(r_get(request_url).text)
+    df = pd.read_csv(
+        response, index_col='Date', parse_dates=True
+    )
     df = df.astype(float)
     df.dropna(inplace=True)
     return {
@@ -279,7 +211,10 @@ def get_pn_data(site_id, map_date=dt.now()):
     e_date = f'&year={dt_t2.year}&month={dt_t2.month}&day={dt_t2.day}'
     pcode = '&pcode=af'
     request_url = f'{base_url}{station}{frmt}{s_date}{e_date}{pcode}'
-    df = pd.read_csv(request_url, index_col='DateTime', parse_dates=True)
+    response = StringIO(r_get(request_url).text)
+    df = pd.read_csv(
+        response, index_col='DateTime', parse_dates=True
+    )
     df = df.astype(float)
     df.dropna(inplace=True)
     return {
@@ -298,8 +233,9 @@ def get_gp_data(site_id, map_date=dt.now()):
     e_date = f'&eyer={dt_t2.year}&emnth={dt_t2.month}&edy={dt_t2.day}'
     frmt = '&format=4'
     request_url = f'{base_url}{param}{s_date}{e_date}{frmt}'
+    response = StringIO(r_get(request_url).text)
     df = pd.read_csv(
-        request_url, index_col='#DATE', parse_dates=True, na_values='MISSING'
+        response, index_col='#DATE', parse_dates=True, na_values='MISSING'
     )
     df = df.astype(float)
     df.dropna(inplace=True)
@@ -375,7 +311,7 @@ def get_embed(href):
     )   
     return embed
 
-def add_region_markers(rs_map, regions=regions, nrcs_url=nrcs_url, map_date=None):
+def add_region_markers(rs_map, regions=regions, nrcs_url=NRCS_URL, map_date=None):
     for region, region_meta in regions.items():
         print(f'    Adding {region} to the map...')
         basin_name = region
@@ -552,6 +488,7 @@ if __name__ == '__main__':
     parser.add_argument("-o", "--output", help="set output folder")
     parser.add_argument("-n", "--name", help="use alternate name *.html")
     parser.add_argument("-m", "--makedir", help="create output folder if it doesn't exist", action='store_true')
+    parser.add_argument("-g", "--gis", help="update local gis files with current NRCS data", action='store_true')
     
     args = parser.parse_args()
     
@@ -564,9 +501,10 @@ if __name__ == '__main__':
         except ValueError as err:
             print(f'Could not parse {args.date}, using current date instead. - {err}')    
     
-    # huc2 = get_huc_nrcs_stats(2)
-    # huc6 = get_huc_nrcs_stats(6)
-    
+    if args.gis:
+        huc2 = get_huc_nrcs_stats(2)
+        huc6 = get_huc_nrcs_stats(6)
+
     this_dir = path.dirname(path.realpath(__file__))
     map_dir = path.join(this_dir, 'maps')
     makedirs(map_dir, exist_ok=True)
@@ -586,30 +524,31 @@ if __name__ == '__main__':
         map_path = path.join(map_dir, f'{args.name}.html')
     else:
         map_path = path.join(map_dir, 'regional_status.html')
-        # map_path = path.join(map_dir, 'regional_status_dev.html')
         
     print(f'Creating map here: {map_dir}')
     gis_dir = path.join(this_dir, 'gis')
     
-    rs_map = folium.Map(
-            tiles=None,
-            # location=[39.5, -110],
-            # zoom_start=5.5
-        )
-    add_huc_layer(rs_map, 2)
-    # add_huc_chropleth(
-    #     rs_map, data_type='swe', show=True, huc_level='6', gis_path='gis'
-    # )
-    # add_huc_chropleth(
-    #     rs_map, data_type='prec', show=False, huc_level='6', gis_path='gis'
-    # )
+    rs_map = folium.Map(tiles=None)
+    show_prec = False
+    show_swe = True
+    if get_season() =='summer':
+        show_prec = True
+        show_swe = False
+    add_huc_chropleth(
+        rs_map, data_type='swe', show=show_swe, huc_level='6', gis_path='gis'
+    )
+    add_huc_chropleth(
+        rs_map, data_type='prec', show=show_prec, huc_level='6', gis_path='gis'
+    )
+    add_huc_layer(rs_map, level=2, show=True)
     add_optional_tilesets(rs_map)
-    folium.LayerControl().add_to(rs_map)
+    folium.LayerControl('topleft').add_to(rs_map)
     FloatImage(
         get_bor_seal(orient='horz'),
         bottom=78,
         left=1
     ).add_to(rs_map)
+    get_colormap().add_to(rs_map)
     # MousePosition(prefix="Location: ").add_to(rs_map)
     
     print('  Adding Regional Forecast markers...')
@@ -627,8 +566,8 @@ if __name__ == '__main__':
     legend = folium.Element(get_legend())
     rs_map.get_root().html.add_child(legend)
     
-    dev_link = folium.Element(get_dev_link())
-    rs_map.get_root().html.add_child(dev_link)
+    # dev_link = folium.Element(get_dev_link())
+    # rs_map.get_root().html.add_child(dev_link)
     
     rs_map.save(map_path)
     flavicon = (
@@ -641,7 +580,7 @@ if __name__ == '__main__':
     with open(map_path, 'w') as html_file:
         chart_file_str = chart_file_str.replace(r'</head>', flavicon)
         replace_str = (
-            '''left:40px; top:10px; max-width:15%; max-height:15%;
+            '''left:100px; top:10px; max-width:15%; max-height:15%;
                 background-color:rgba(255,255,255,0.5);
                 border-radius: 10px; padding: 10px;'''
         )
