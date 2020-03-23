@@ -560,7 +560,7 @@ if __name__ == '__main__':
         left=1
     ).add_to(rs_map)
     get_colormap().add_to(rs_map)
-    MousePosition(prefix="Location: ").add_to(rs_map)
+    # MousePosition(prefix="Location: ").add_to(rs_map)
     BrowserPrint().add_to(rs_map)
     # add_print_button(rs_map)
     print('  Adding Regional Forecast markers...')
