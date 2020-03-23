@@ -47,5 +47,5 @@ class BrowserPrint(MacroElement):
                                             'if it is not in a Figure.')
 
         figure.header.add_child(
-            JavascriptLink('https://cdn.jsdelivr.net/npm/leaflet.browser.print@1.0.2/dist/leaflet.browser.print.min.js')
-        )  # noqa
+            JavascriptLink('https://www.usbr.gov/uc/water/hydrodata/assets/leaflet/js/leaflet.browser.print.min.js')
+        )
