@@ -12,7 +12,7 @@ from requests import get as r_get
 import folium
 import branca
 import pandas as pd
-from folium.plugins import FloatImage
+from folium.plugins import FloatImage, MousePosition
 from folium.features import DivIcon
 # import geopandas as gpd
 # from shapely.geometry import Point
@@ -24,6 +24,7 @@ from region_status_utils import get_bor_js, get_bor_css, NRCS_URL
 from region_status_utils import get_default_js, get_default_css
 from region_status_utils import get_nrcs_basin_stat, add_huc_chropleth
 from region_status_utils import get_huc_nrcs_stats, get_colormap
+from browser_print import BrowserPrint
 
 bor_js = get_bor_js()
 bor_css = get_bor_css()
@@ -60,6 +61,9 @@ regions = {
     },
     'Upper Colorado': {
         'coords': [39.5, -110.7], 'level': 2,
+    },
+    'Upper Klamath Lake': {
+        'coords': [43.5, -121.7], 'level': 8,
     }
 }
 
@@ -81,6 +85,9 @@ reservoirs = {
     },
     'Arrowrock Reservoir': {
         'coords': [43.604093, -115.858169], 'region': 'pn', 'anno': 1, 'cap': 272.2, 'id': 'ark'
+    },
+    'Upper Klamath Lake': {
+        'coords': [42.400095, -121.876113], 'region': 'mp', 'anno': 1, 'cap': 515.615, 'id': 'klm', 'duration': 'M'
     },
     'Trinity Dam': {
         'coords': [40.969630, -122.676816], 'region': 'mp', 'anno': 1, 'cap': 2447.7, 'id': 'cle'
@@ -246,11 +253,11 @@ def get_gp_data(site_id, map_date=dt.now()):
         'url': request_url.replace('format=4', 'format=3')
     }
 
-def get_mp_data(site_id, map_date=dt.now()):
+def get_mp_data(site_id, map_date=dt.now(), duration='D'):
     base_url = 'http://cdec.water.ca.gov/dynamicapp/req/CSVDataServlet'
     station = f'?Stations={site_id.upper()}'
     sensor = '&SensorNums=15'
-    duration = '&dur_code=D'
+    duration = f'&dur_code={duration}'
     now = map_date
     t1 = dt(now.year - 1, now.month, now.day).strftime('%Y-%m-%d')
     s_date = f'&Start={t1}'
@@ -380,7 +387,10 @@ def add_res_markers(rs_map, reservoirs=reservoirs, map_date=None):
             elif res_meta['region'] == 'gp':
                 current_data = get_gp_data(res_meta['id'], map_date=map_date)
             elif res_meta['region'] == 'mp':
-                current_data = get_mp_data(res_meta['id'], map_date=map_date)
+                current_data = get_mp_data(
+                    res_meta['id'], 
+                    map_date=map_date,
+                    duration=res_meta.get('duration', 'D'))
             else:
                 current_data = None
         except Exception as err:
@@ -529,6 +539,7 @@ if __name__ == '__main__':
     gis_dir = path.join(this_dir, 'gis')
     
     rs_map = folium.Map(tiles=None)
+    
     show_prec = False
     show_swe = True
     if get_season() =='summer':
@@ -549,8 +560,9 @@ if __name__ == '__main__':
         left=1
     ).add_to(rs_map)
     get_colormap().add_to(rs_map)
-    # MousePosition(prefix="Location: ").add_to(rs_map)
-    
+    MousePosition(prefix="Location: ").add_to(rs_map)
+    BrowserPrint().add_to(rs_map)
+    # add_print_button(rs_map)
     print('  Adding Regional Forecast markers...')
     add_frcst_markers(rs_map, map_date=map_date)
     print('  Adding Regional Reservoir markers...')
@@ -568,11 +580,17 @@ if __name__ == '__main__':
     
     # dev_link = folium.Element(get_dev_link())
     # rs_map.get_root().html.add_child(dev_link)
-    
+    # folium.plugins.MiniMap(
+    #     tile_layer='Stamen Terrain', 
+    #     position='bottomright',
+    #     # zoom_level_fixed=12,
+    #     # center_fixed=True
+    # ).add_to(rs_map)
     rs_map.save(map_path)
     flavicon = (
         f'<link rel="shortcut icon" '
-        f'href="{get_favicon()}"></head>'
+        f'href="{get_favicon()}">'
+        f'</head>'
     )
     with open(map_path, 'r') as html_file:
         chart_file_str = html_file.read()
@@ -585,5 +603,17 @@ if __name__ == '__main__':
                 border-radius: 10px; padding: 10px;'''
         )
         chart_file_str = chart_file_str.replace(r'left:1%;', replace_str)
+        
+        find_str = (
+            """.append("svg")
+            .attr("id", 'legend')"""
+        )
+        replace_str = (
+            '''.append("svg")
+                 .attr("id", "legend")
+                 .attr("style", "background-color:rgba(255,255,255,0.75);border-radius: 10px;")'''
+        )
+        chart_file_str = chart_file_str.replace(find_str, replace_str)
+
         html_file.write(chart_file_str)
     print(f'\nCreated map here: {map_path}')

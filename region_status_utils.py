@@ -90,6 +90,7 @@ def get_default_js():
          bootstrap_dict['popper']),
     ]
 
+
 def get_default_css():
     bootstrap_dict = get_bootstrap()
     return [
