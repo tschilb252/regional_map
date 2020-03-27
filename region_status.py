@@ -139,7 +139,7 @@ def get_legend():
     legend_html = f'''
   <div>
     <div style="position: fixed; bottom: 205px; left: 30px; z-index:9999; font-size:x-large;">
-      <b>Reclamation West-Wide Summary</b><br>
+      <b></b><br>
     </div>
     <div style="position: fixed; bottom: 185px; left: 35px; z-index:9999; font-size:medium;">
         Precipitation and Storage Figures<br>
@@ -159,6 +159,100 @@ def get_legend():
     </div>
   </div>
     '''
+    legend_html = f'''
+    <div class="dropdown show dropdown-toggle-split" style="position: absolute; bottom:80%; left:3%; z-index:700;">
+      <a class="btn btn-secondary btn-lg dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        West-Wide Summary
+      </a>
+      <div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+          <a class="dropdown-item" href="#">
+            <b>Precipitation and Storage Figures</b>
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="#">
+            <sup>1</sup>Storage percent of capacity more sensitive to seasonal flows<br>
+            <sup>2</sup>Storage percent of capacity less sensitive to seasonal flows
+          </a>
+          <a class="dropdown-item" href="https://www.usbr.gov/" target="_blank">
+            <i class="fa fa-umbrella"></i>&nbsp Water year-to-date precipitation (precip) provided as % of average<br>
+            <i class="fa fa-snowflake-o"></i>&nbsp Snow water equivalent (snow) provided as % of median<br>
+            <i class="fa fa-tint"></i>&nbsp Reservoir storage provided as percentage of capacity<br>
+            <i class="fa fa-tachometer"></i>&nbsp Forecast volumes provided as percentage of 30-yr average<br>
+          </a>
+          <a class="dropdown-item" href="https://www.usgs.gov/" target="_blank">
+            Precipitation, SWE, and reservoir data available from 
+            <a href="https://www.wcc.nrcs.usda.gov/">NRCS</a>/
+            <a href="https://www.usbr.gov/">BOR</a>/
+            <a href="https://cdec.water.ca.gov/">CDEC</a><br>
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="#">
+            Updated: {update_date}<br>
+          </a>
+      </div>
+    </div>
+    '''
+    legend_html_dev = f'''
+  <div class="btn-group" role="group">
+    <button type="button" style="position: relative; bottom:10px; left:200px; z-index:9999; font-size:x-large; position:fixed; bottom:12%; left:0%; z-index:9999; background-color:rgba(255,255,255,0.5);border-radius: 10px; padding: 10px;">
+      <b>Reclamation West-Wide Summary</b><br>
+    </button>
+    <button type="button" style="position: relative; bottom:10px; left:200px; z-index:9999; font-size:medium; position:fixed; bottom:12%; left:0%; z-index:9999; background-color:rgba(255,255,255,0.5);border-radius: 10px; padding: 10px;">
+        <b>Precipitation and Storage Figures</b><br>
+        <sup>1</sup>Storage percent of capacity more sensitive to seasonal flows<br>
+        <sup>2</sup>Storage percent of capacity less sensitive to seasonal flows<br>
+    </button>
+    <button type="button" style="position: relative; bottom:10px; left:450px; z-index:9999; font-size:x-small; position:fixed; bottom:12%; left:0%; z-index:9999; background-color:rgba(255,255,255,0.5);border-radius: 10px; padding: 10px;">
+      <i class="fa fa-umbrella"></i>&nbsp Water year-to-date precipitation (precip) provided as % of average<br>
+      <i class="fa fa-snowflake-o"></i>&nbsp Snow water equivalent (snow) provided as % of median<br>
+      <i class="fa fa-tint"></i>&nbsp Reservoir storage provided as percentage of capacity<br>
+      <i class="fa fa-tachometer"></i>&nbsp Forecast volumes provided as percentage of 30-yr average<br>
+      Precipitation, SWE, and reservoir data available from 
+      <a href="https://www.wcc.nrcs.usda.gov/">NRCS</a>/
+      <a href="https://www.usbr.gov/">BOR</a>/
+      <a href="https://cdec.water.ca.gov/">CDEC</a><br>
+      Updated as of {update_date}
+    </button>
+  </div>
+    '''
+    print_only = f'''
+    <div class="btn-group grid-print-content" role="group" style="position: absolute; bottom:0%; right:0%; z-index:9999;" leaflet-browser-print-pages>
+      <button type="button" class="btn-light">
+        <img src="{get_bor_seal(orient='horz')}" class="img-fluid">
+      </button>
+      <button type="button" class="btn-light">
+        <span style="font-size:large; white-space: nowrap;">
+          <b>Reclamation West-Wide Summary</b>
+        </span><br>
+        <span style="font-size:medium; white-space: nowrap;">
+          <b>Precipitation and Storage Figures</b>
+        </span><br>
+      </button>
+      <button type="button" class="btn-light">
+        <span style="font-size:small; white-space: nowrap;">
+          <sup>1</sup>Storage percent of capacity more sensitive to seasonal flows<br>
+          <sup>2</sup>Storage percent of capacity less sensitive to seasonal flows
+        </span>
+      </button>
+      <button type="button" class="btn-light">
+        <span  style="font-size:small; text-align:left; white-space: nowrap;">
+          <i class="fa fa-umbrella"></i>&nbsp Water year-to-date precipitation (precip) provided as % of average<br>
+          <i class="fa fa-snowflake-o"></i>&nbsp Snow water equivalent (snow) provided as % of median<br>
+          <i class="fa fa-tint"></i>&nbsp Reservoir storage provided as percentage of capacity<br>
+          <i class="fa fa-tachometer"></i>&nbsp Forecast volumes provided as percentage of 30-yr average<br>
+        </span>
+      </button>
+      <button type="button" class="btn-light">  
+        <span  style="font-size:small; text-align:left; white-space: nowrap;">
+          Precipitation, SWE, and reservoir data available from:<br>
+          <a href="https://www.wcc.nrcs.usda.gov/">NRCS</a>/
+          <a href="https://www.usbr.gov/">BOR</a>/
+          <a href="https://cdec.water.ca.gov/">CDEC</a><br>
+          Updated as of {update_date}
+        </span>
+      </button>
+    </div>
+  '''
     return legend_html
 
 def get_uc_data(sdi, map_date=dt.now()):
@@ -538,7 +632,9 @@ if __name__ == '__main__':
     print(f'Creating map here: {map_dir}')
     gis_dir = path.join(this_dir, 'gis')
     
-    rs_map = folium.Map(tiles=None)
+    rs_map = folium.Map(
+        tiles=None, location=(41, -111), zoom_start=6, control_scale=True
+    )
     
     show_prec = False
     show_swe = True
@@ -556,8 +652,8 @@ if __name__ == '__main__':
     folium.LayerControl('topleft').add_to(rs_map)
     FloatImage(
         get_bor_seal(orient='horz'),
-        bottom=78,
-        left=1
+        bottom='monkey_patch',
+        left=4
     ).add_to(rs_map)
     get_colormap().add_to(rs_map)
     # MousePosition(prefix="Location: ").add_to(rs_map)
@@ -573,24 +669,55 @@ if __name__ == '__main__':
     all_coords = [i['coords'] for i in reservoirs.values()]
     all_coords = all_coords + [i['coords'] for i in forecasts.values()]
     all_coords = all_coords + [i['coords'] for i in regions.values()]
-    rs_map.fit_bounds(all_coords)
-
+    # rs_map.fit_bounds(all_coords)
+    
     legend = folium.Element(get_legend())
     rs_map.get_root().html.add_child(legend)
-    
-    # dev_link = folium.Element(get_dev_link())
-    # rs_map.get_root().html.add_child(dev_link)
-    # folium.plugins.MiniMap(
-    #     tile_layer='Stamen Terrain', 
-    #     position='bottomright',
-    #     # zoom_level_fixed=12,
-    #     # center_fixed=True
-    # ).add_to(rs_map)
+
     rs_map.save(map_path)
     flavicon = (
         f'<link rel="shortcut icon" '
         f'href="{get_favicon()}">'
         f'</head>'
+        '''
+        <style>
+            .grid-print-container {
+                grid-template: auto 1fr auto / 1fr;
+                background-color: orange;
+            }
+            .grid-map-print {
+                grid-row: 2;
+            }
+
+            .grid-print-container > .title,
+            .grid-print-container > .sub-content {
+                color: white;
+            }
+            .title {
+                grid-row: 1;
+                justify-self: center;
+                text-align: center;
+                color: grey;
+				box-sizing: border-box;
+				margin-top: 0;
+            }
+            .sub-content {
+                grid-row: 5;
+                padding-left: 10px;
+                text-align: center;
+                color: grey;
+				box-sizing: border-box;
+            }
+        </style>
+		<style>
+			[leaflet-browser-print-pages] {
+				display: none;
+			}
+			.pages-print-container [leaflet-browser-print-pages] {
+				display: block;
+			}
+		</style>
+        '''
     )
     with open(map_path, 'r') as html_file:
         chart_file_str = html_file.read()
@@ -598,21 +725,22 @@ if __name__ == '__main__':
     with open(map_path, 'w') as html_file:
         chart_file_str = chart_file_str.replace(r'</head>', flavicon)
         replace_str = (
-            '''left:100px; top:10px; max-width:15%; max-height:15%;
-                background-color:rgba(255,255,255,0.5);
-                border-radius: 10px; padding: 10px;'''
+            'z-index:700; bottom:87%; max-width:15%; max-height:15%; background-color:rgba(255,255,255,0.5); border-radius: 10px; padding: 10px;'
         )
-        chart_file_str = chart_file_str.replace(r'left:1%;', replace_str)
+        chart_file_str = chart_file_str.replace(
+            'bottom:monkey_patch%;', 
+            replace_str
+        )
         
         find_str = (
-            """.append("svg")
-            .attr("id", 'legend')"""
-        )
+                """.append("svg")
+        .attr("id", 'legend')"""
+            )
         replace_str = (
-            '''.append("svg")
-                 .attr("id", "legend")
-                 .attr("style", "background-color:rgba(255,255,255,0.75);border-radius: 10px;")'''
-        )
+                '''.append("svg")
+                     .attr("id", "legend")
+                     .attr("style", "background-color:rgba(255,255,255,0.75);border-radius: 10px;")'''
+            )
         chart_file_str = chart_file_str.replace(find_str, replace_str)
 
         html_file.write(chart_file_str)

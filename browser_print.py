@@ -28,7 +28,7 @@ class BrowserPrint(MacroElement):
         {% endmacro %}
         """)  # noqa
 
-    def __init__(self, position='bottomright', print_modes=['landscape'], **kwargs):
+    def __init__(self, position='topleft', print_modes=['landscape'], **kwargs):
 
         super(BrowserPrint, self).__init__()
         self._name = 'BrowserPrint'
@@ -49,3 +49,4 @@ class BrowserPrint(MacroElement):
         figure.header.add_child(
             JavascriptLink('https://www.usbr.gov/uc/water/hydrodata/assets/leaflet/js/leaflet.browser.print.min.js')
         )
+            
