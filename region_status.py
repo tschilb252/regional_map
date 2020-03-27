@@ -170,20 +170,20 @@ def get_legend():
           </a>
           <div class="dropdown-divider"></div>
           <a class="dropdown-item" href="#">
-            <sup>1</sup>Storage percent of capacity more sensitive to seasonal flows<br>
-            <sup>2</sup>Storage percent of capacity less sensitive to seasonal flows
-          </a>
-          <a class="dropdown-item" href="https://www.usbr.gov/" target="_blank">
             <i class="fa fa-umbrella"></i>&nbsp Water year-to-date precipitation (precip) provided as % of average<br>
             <i class="fa fa-snowflake-o"></i>&nbsp Snow water equivalent (snow) provided as % of median<br>
             <i class="fa fa-tint"></i>&nbsp Reservoir storage provided as percentage of capacity<br>
             <i class="fa fa-tachometer"></i>&nbsp Forecast volumes provided as percentage of 30-yr average<br>
           </a>
-          <a class="dropdown-item" href="https://www.usgs.gov/" target="_blank">
+          <a class="dropdown-item" href="#">
+            <sup>1</sup>Storage percent of capacity more sensitive to seasonal flows<br>
+            <sup>2</sup>Storage percent of capacity less sensitive to seasonal flows
+          </a>
+          <a class="dropdown-item" href="#" style="white-space:nowrap; display:inline-block;">
             Precipitation, SWE, and reservoir data available from 
-            <a href="https://www.wcc.nrcs.usda.gov/">NRCS</a>/
-            <a href="https://www.usbr.gov/">BOR</a>/
-            <a href="https://cdec.water.ca.gov/">CDEC</a><br>
+            <a href="https://www.wcc.nrcs.usda.gov/">NRCS</a>
+            <a href="https://www.usbr.gov/">BOR</a>
+            <a href="https://cdec.water.ca.gov/">CDEC</a>
           </a>
           <div class="dropdown-divider"></div>
           <a class="dropdown-item" href="#">
