@@ -216,7 +216,7 @@ def get_legend():
   </div>
     '''
     print_only = f'''
-    <div class="btn-group grid-print-content" role="group" style="position: absolute; bottom:0%; right:0%; z-index:9999;" leaflet-browser-print-pages>
+    <div class="btn-group" role="group" style="position: absolute; bottom:0%; right:0%; z-index:9999;" print-only>
       <button type="button" class="btn-light">
         <img src="{get_bor_seal(orient='horz')}" class="img-fluid">
       </button>
@@ -253,7 +253,7 @@ def get_legend():
       </button>
     </div>
   '''
-    return legend_html
+    return legend_html + print_only
 
 def get_uc_data(sdi, map_date=dt.now()):
     base_url = 'https://www.usbr.gov/pn-bin/hdb/hdb.pl?svr=uchdb2'
@@ -592,7 +592,7 @@ if __name__ == '__main__':
     parser.add_argument("-o", "--output", help="set output folder")
     parser.add_argument("-n", "--name", help="use alternate name *.html")
     parser.add_argument("-m", "--makedir", help="create output folder if it doesn't exist", action='store_true')
-    parser.add_argument("-g", "--gis", help="update local gis files with current NRCS data", action='store_true')
+    parser.add_argument("-g", "--gis", help="update local gis files with current NRCS data, or pass path for alt gis folder.", const=True, nargs='?')
     
     args = parser.parse_args()
     
@@ -604,14 +604,17 @@ if __name__ == '__main__':
             map_date = dt.strptime(args.date, "%Y-%m-%d")
         except ValueError as err:
             print(f'Could not parse {args.date}, using current date instead. - {err}')    
-    
-    if args.gis:
-        huc2 = get_huc_nrcs_stats(2)
-        huc6 = get_huc_nrcs_stats(6)
 
     this_dir = path.dirname(path.realpath(__file__))
     map_dir = path.join(this_dir, 'maps')
     makedirs(map_dir, exist_ok=True)
+    gis_dir = path.join(this_dir, 'gis')
+    if path.isdir(str(args.gis)):
+        gis_dir = args.gis
+    if args.gis == True:
+        huc2 = get_huc_nrcs_stats(2)
+        huc6 = get_huc_nrcs_stats(6)
+
     if args.output:
         if path.exists(args.output):
             map_dir = args.output
@@ -630,7 +633,6 @@ if __name__ == '__main__':
         map_path = path.join(map_dir, 'regional_status.html')
         
     print(f'Creating map here: {map_dir}')
-    gis_dir = path.join(this_dir, 'gis')
     
     rs_map = folium.Map(
         tiles=None, location=(41, -111), zoom_start=6, control_scale=True
@@ -681,39 +683,21 @@ if __name__ == '__main__':
         f'</head>'
         '''
         <style>
-            .grid-print-container {
-                grid-template: auto 1fr auto / 1fr;
-                background-color: orange;
+        .grid-print-container {
+                grid-template: 1fr;
+                background-color: white;
             }
             .grid-map-print {
-                grid-row: 2;
+                grid-row: 1;
             }
 
-            .grid-print-container > .title,
-            .grid-print-container > .sub-content {
-                color: white;
-            }
-            .title {
-                grid-row: 1;
-                justify-self: center;
-                text-align: center;
-                color: grey;
-				box-sizing: border-box;
-				margin-top: 0;
-            }
-            .sub-content {
-                grid-row: 5;
-                padding-left: 10px;
-                text-align: center;
-                color: grey;
-				box-sizing: border-box;
-            }
         </style>
 		<style>
-			[leaflet-browser-print-pages] {
+			[print-only] {
+                grid-row: 1;
 				display: none;
 			}
-			.pages-print-container [leaflet-browser-print-pages] {
+			.pages-print-container [print-only] {
 				display: block;
 			}
 		</style>
