@@ -328,15 +328,20 @@ def style_prec_chropleth(feature):
         'fillColor': '#00000000' if stat_value == 'N/A' else colormap(stat_value)
     }
 
-def add_huc_chropleth(m, data_type='swe', show=True, huc_level='6', gis_path='gis'):
+def add_huc_chropleth(m, data_type='swe', show=True, huc_level='6', 
+                      gis_path='gis', filter_str=None):
+    
     huc_str = f'HUC{huc_level}'
-    # topo_json_path = path.join(gis_path, f'{huc_str}.topojson')
-    topo_json_path = f'{GIS_URL}/{huc_str}.topojson'
-    stat_type_dict = {'swe': 'Median', 'prec': 'Average'}
+    topo_json_path = path.join(gis_path, f'{huc_str}.topojson')
+    stat_type_dict = {'swe': 'Median', 'prec': 'Avg.'}
     stat_type = stat_type_dict.get(data_type, '')
-    layer_name = f'% {stat_type} {data_type.upper()}'
-    with r_get(topo_json_path) as tj:
-        topo_json = tj.json()
+    layer_name = f'{huc_str} % {stat_type} {data_type.upper()}'
+    with open(topo_json_path, 'r') as tj:
+        topo_json = json.load(tj)
+    if filter_str:
+        topo_json = filter_topo_json(
+            topo_json, huc_level=huc_level, filter_str=filter_str
+        )
     style_chropleth_dict = {
         'swe': style_swe_chropleth, 'prec': style_prec_chropleth
     }
@@ -350,6 +355,25 @@ def add_huc_chropleth(m, data_type='swe', show=True, huc_level='6', gis_path='gi
             ['Name', f'{data_type}_percent'],
             aliases=['Basin Name:', f'{layer_name}:'])
     ).add_to(m)
+
+def filter_geo_json(geo_json_path, filter_attr='HUC2', filter_str='14'):
+   
+    f_geo_json = {'type': 'FeatureCollection'}
+    with open(geo_json_path, 'r') as gj:
+        geo_json = json.load(gj)
+    features = [i for i in geo_json['features'] if 
+                i['properties'][filter_attr][:2] == filter_str]
+    f_geo_json['features'] = features
+    
+    return f_geo_json
+
+def filter_topo_json(topo_json, huc_level=2, filter_str='14'):
+    
+    geometries = topo_json['objects'][f'HUC{huc_level}']['geometries']
+    geometries[:] = [i for i in geometries if 
+                i['properties'][f'HUC{huc_level}'][:len(filter_str)] == filter_str]
+    topo_json['geometries'] = geometries
+    return topo_json
 
 def get_colormap(low=50, high=150):
     # colormap = branca.colormap.linear.RdYlBu_09.scale(low, high)

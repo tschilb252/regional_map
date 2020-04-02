@@ -610,6 +610,7 @@ if __name__ == '__main__':
     makedirs(map_dir, exist_ok=True)
     gis_dir = path.join(this_dir, 'gis')
     if path.isdir(str(args.gis)):
+        print('Using alt gis dir: {args.gis}')
         gis_dir = args.gis
     if args.gis == True:
         huc2 = get_huc_nrcs_stats(2)
