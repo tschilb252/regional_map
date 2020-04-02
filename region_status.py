@@ -645,10 +645,17 @@ if __name__ == '__main__':
         show_prec = True
         show_swe = False
     add_huc_chropleth(
-        rs_map, data_type='swe', show=show_swe, huc_level='6', gis_path='gis'
+        rs_map, data_type='swe', 
+        show=show_swe, 
+        huc_level='6', 
+        gis_path=gis_dir
     )
     add_huc_chropleth(
-        rs_map, data_type='prec', show=show_prec, huc_level='6', gis_path='gis'
+        rs_map, 
+        data_type='prec', 
+        show=show_prec, 
+        huc_level='6', 
+        gis_path=gis_dir
     )
     add_huc_layer(rs_map, level=2, show=True)
     add_optional_tilesets(rs_map)
