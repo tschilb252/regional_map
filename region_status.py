@@ -639,6 +639,7 @@ if __name__ == '__main__':
         tiles=None, location=(41, -111), zoom_start=6, control_scale=True
     )
     
+    add_huc_layer(rs_map, level=2, show=True)
     show_prec = False
     show_swe = True
     if get_season() =='summer':
@@ -657,7 +658,7 @@ if __name__ == '__main__':
         huc_level='6', 
         gis_path=gis_dir
     )
-    add_huc_layer(rs_map, level=2, show=True)
+    
     add_optional_tilesets(rs_map)
     folium.LayerControl('topleft').add_to(rs_map)
     FloatImage(
