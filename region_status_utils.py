@@ -300,34 +300,6 @@ def get_huc_nrcs_stats(huc_level='6'):
     with open(topo_json_path, 'w') as tj:
         json.dump(topo_json, tj)
 
-def style_swe_chropleth(feature):
-    colormap = get_colormap()
-    stat_value = feature['properties'].get('swe_percent', 'N/A')
-    if stat_value == 'N/A':
-        fill_opacity = 0
-    else:
-        stat_value = float(stat_value)
-        fill_opacity = (abs(stat_value - 100)) / 100 + 0.1
-    return {
-        'fillOpacity': 0.75 if fill_opacity > 0.75 else fill_opacity,
-        'weight': 0,
-        'fillColor': '#00000000' if stat_value == 'N/A' else colormap(stat_value)
-    }
-
-def style_prec_chropleth(feature):
-    colormap = get_colormap()
-    stat_value = feature['properties'].get('swe_percent', 'N/A')
-    if stat_value == 'N/A':
-        fill_opacity = 0
-    else:
-        stat_value = float(stat_value)
-        fill_opacity = (abs(stat_value - 100)) / 100 + 0.1
-    return {
-        'fillOpacity': 0.75 if fill_opacity > 0.75 else fill_opacity,
-        'weight': 0,
-        'fillColor': '#00000000' if stat_value == 'N/A' else colormap(stat_value)
-    }
-
 def add_huc_chropleth(m, data_type='swe', show=True, huc_level='6', 
                       gis_path='gis', filter_str=None, use_topo=False):
     
@@ -343,7 +315,8 @@ def add_huc_chropleth(m, data_type='swe', show=True, huc_level='6',
             topo_json, huc_level=huc_level, filter_str=filter_str
         )
     style_chropleth_dict = {
-        'swe': style_swe_chropleth, 'prec': style_prec_chropleth
+        'swe': lambda x: style_swe_chropleth(x, huc_level=huc_level, huc_filter=filter_str), 
+        'prec': lambda x: style_prec_chropleth(x, huc_level=huc_level, huc_filter=filter_str)
     }
     if use_topo:
         folium.TopoJson(
@@ -370,6 +343,44 @@ def add_huc_chropleth(m, data_type='swe', show=True, huc_level='6',
                 ['Name', f'{data_type}_percent'],
                 aliases=['Basin Name:', f'{layer_name}:'])
         ).add_to(m)
+
+def style_swe_chropleth(feature, huc_level='2', huc_filter='14'):
+    huc_filter = str(huc_filter)
+    huc_level = str(huc_level)
+    colormap = get_colormap()
+    stat_value = feature['properties'].get('swe_percent', 'N/A')
+    huc_id = str(feature['properties'].get('HUC{huc_level}', 'N/A'))
+    if stat_value == 'N/A':
+        fill_opacity = 0
+    else:
+        stat_value = float(stat_value)
+        fill_opacity = (abs(stat_value - 100)) / 100 + 0.1
+        if fill_opacity > 0.75: 
+            fill_opacity = 0.75
+    return {
+        'fillOpacity': 0 if stat_value == 'N/A' or huc_id[:len(huc_filter)] != huc_filter else fill_opacity,
+        'weight': 0,
+        'fillColor': '#00000000' if stat_value == 'N/A' or huc_id[:len(huc_filter)] != huc_filter else colormap(stat_value)
+    }
+
+def style_prec_chropleth(feature, huc_level='2', huc_filter='14'):
+    huc_filter = str(huc_filter)
+    huc_level = str(huc_level)
+    colormap = get_colormap()
+    stat_value = feature['properties'].get('swe_percent', 'N/A')
+    huc_id = str(feature['properties'].get('HUC{huc_level}', 'N/A'))
+    if stat_value == 'N/A':
+        fill_opacity = 0
+    else:
+        stat_value = float(stat_value)
+        fill_opacity = (abs(stat_value - 100)) / 100 + 0.1
+        if fill_opacity > 0.75:
+            fill_opacity = 0.75
+    return {
+        'fillOpacity': 0 if stat_value == 'N/A' or huc_id[:len(huc_filter)] != huc_filter else fill_opacity,
+        'weight': 0,
+        'fillColor': '#00000000' if stat_value == 'N/A' or huc_id[:len(huc_filter)] != huc_filter else colormap(stat_value)
+    }
 
 def filter_geo_json(geo_json_path, filter_attr='HUC2', filter_str='14'):
    
