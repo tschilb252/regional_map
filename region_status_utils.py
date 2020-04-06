@@ -329,7 +329,7 @@ def style_prec_chropleth(feature):
     }
 
 def add_huc_chropleth(m, data_type='swe', show=True, huc_level='6', 
-                      gis_path='gis', filter_str=None):
+                      gis_path='gis', filter_str=None, use_topo=False):
     
     huc_str = f'HUC{huc_level}'
     topo_json_path = path.join(gis_path, f'{huc_str}.topojson')
@@ -345,16 +345,31 @@ def add_huc_chropleth(m, data_type='swe', show=True, huc_level='6',
     style_chropleth_dict = {
         'swe': style_swe_chropleth, 'prec': style_prec_chropleth
     }
-    folium.TopoJson(
-        topo_json,
-        f'objects.{huc_str}',
-        name=layer_name,
-        show=show,
-        style_function=style_chropleth_dict[data_type],
-        tooltip=folium.features.GeoJsonTooltip(
-            ['Name', f'{data_type}_percent'],
-            aliases=['Basin Name:', f'{layer_name}:'])
-    ).add_to(m)
+    if use_topo:
+        folium.TopoJson(
+            topo_json,
+            f'objects.{huc_str}',
+            name=layer_name,
+            show=show,
+            style_function=style_chropleth_dict[data_type],
+            tooltip=folium.features.GeoJsonTooltip(
+                ['Name', f'{data_type}_percent'],
+                aliases=['Basin Name:', f'{layer_name}:'])
+        ).add_to(m)
+    else:
+        json_path = f'{STATIC_URL}/gis/HUC{huc_level}.geojson'
+        folium.GeoJson(
+            json_path,
+            name=layer_name,
+            embed=False,
+            overlay=True,
+            smooth_factor=2.0,
+            style_function=style_chropleth_dict[data_type],
+            show=show,
+            tooltip=folium.features.GeoJsonTooltip(
+                ['Name', f'{data_type}_percent'],
+                aliases=['Basin Name:', f'{layer_name}:'])
+        ).add_to(m)
 
 def filter_geo_json(geo_json_path, filter_attr='HUC2', filter_str='14'):
    
