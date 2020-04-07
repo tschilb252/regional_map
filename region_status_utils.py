@@ -348,7 +348,7 @@ def add_huc_chropleth(m, data_type='swe', show=False, huc_level='6',
                 aliases=['Basin Name:', f'{layer_name}:'])
         ).add_to(m)
 
-def style_chropleth(feature, data_type='swe', huc_level='2', huc_filter='14'):
+def style_chropleth(feature, data_type='swe', huc_level='2', huc_filter=''):
     huc_filter = str(huc_filter)
     huc_level = str(huc_level)
     colormap = get_colormap()
@@ -362,9 +362,15 @@ def style_chropleth(feature, data_type='swe', huc_level='2', huc_filter='14'):
         if fill_opacity > 0.75:
             fill_opacity = 0.75
     return {
-        'fillOpacity': 0 if stat_value == 'N/A' or huc_id[:len(huc_filter)] != huc_filter else fill_opacity,
+        'fillOpacity': 
+            0 if stat_value == 'N/A' or 
+            not huc_id[:len(huc_filter)] == huc_filter else 
+            fill_opacity,
         'weight': 0,
-        'fillColor': '#00000000' if stat_value == 'N/A' or huc_id[:len(huc_filter)] != huc_filter else colormap(stat_value)
+        'fillColor': 
+            '#00000000' if stat_value == 'N/A' or 
+            not huc_id[:len(huc_filter)] == huc_filter else 
+            colormap(stat_value)
     }
 
 def filter_geo_json(geo_json_path, filter_attr='HUC2', filter_str='14'):
