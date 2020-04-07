@@ -643,7 +643,8 @@ if __name__ == '__main__':
     show_swe = False if get_season() =='summer' else True
     show_prec = False if show_swe else True
     add_huc_chropleth(
-        rs_map, data_type='swe', 
+        rs_map, 
+        data_type='swe', 
         show=show_swe, 
         huc_level='6'
     )

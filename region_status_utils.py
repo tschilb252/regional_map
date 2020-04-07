@@ -303,6 +303,7 @@ def get_huc_nrcs_stats(huc_level='6'):
 def add_huc_chropleth(m, data_type='swe', show=False, huc_level='6', 
                       gis_path='gis', filter_str=None, use_topo=False):
     
+    huc_level = str(huc_level)
     huc_str = f'HUC{huc_level}'
     stat_type_dict = {'swe': 'Median', 'prec': 'Avg.'}
     stat_type = stat_type_dict.get(data_type, '')
