@@ -640,23 +640,18 @@ if __name__ == '__main__':
     )
     
     add_huc_layer(rs_map, level=2, show=True)
-    show_prec = False
-    show_swe = True
-    if get_season() =='summer':
-        show_prec = True
-        show_swe = False
+    show_swe = False if get_season() =='summer' else True
+    show_prec = False if show_swe else True
     add_huc_chropleth(
         rs_map, data_type='swe', 
         show=show_swe, 
-        huc_level='6', 
-        gis_path=gis_dir
+        huc_level='6'
     )
     add_huc_chropleth(
         rs_map, 
         data_type='prec', 
         show=show_prec, 
-        huc_level='6', 
-        gis_path=gis_dir
+        huc_level='6'
     )
     
     add_optional_tilesets(rs_map)
