@@ -16,7 +16,7 @@ from shapely.geometry import Point
 from datetime import datetime
 from requests import get as r_get
 
-STATIC_URL = f'https://www.usbr.gov/uc/water/hydrodata/assets'
+STATIC_URL = 'http://127.0.0.1:8887'#f'https://www.usbr.gov/uc/water/hydrodata/assets'
 NRCS_URL = r'https://www.nrcs.usda.gov/Internet/WCIS/basinCharts/POR'
 GIS_URL = r'https://www.usbr.gov/uc/water/hydrodata/assets/gis'
 
@@ -301,7 +301,7 @@ def get_huc_nrcs_stats(huc_level='6'):
         json.dump(topo_json, tj)
 
 def add_huc_chropleth(m, data_type='swe', show=False, huc_level='6', 
-                      gis_path='gis', filter_str=None, use_topo=False):
+                      gis_path='gis', huc_filter='', use_topo=False):
     
     huc_level = str(huc_level)
     huc_str = f'HUC{huc_level}'
@@ -312,12 +312,11 @@ def add_huc_chropleth(m, data_type='swe', show=False, huc_level='6',
         topo_json_path = path.join(gis_path, f'{huc_str}.topojson')
         with open(topo_json_path, 'r') as tj:
             topo_json = json.load(tj)
-        if filter_str:
             topo_json = filter_topo_json(
-                topo_json, huc_level=huc_level, filter_str=filter_str
+                topo_json, huc_level=huc_level, filter_str=huc_filter
             )
-    style_function = lambda x: style_chropleth(
-        x, data_type=data_type, huc_level=huc_level, huc_filter=filter_str
+    style_function = lambda feature: style_chropleth(
+        feature, data_type=data_type, huc_level=huc_level, huc_filter=huc_filter
     )
        
     if use_topo:
@@ -374,18 +373,19 @@ def style_chropleth(feature, data_type='swe', huc_level='2', huc_filter=''):
             colormap(stat_value)
     }
 
-def filter_geo_json(geo_json_path, filter_attr='HUC2', filter_str='14'):
+def filter_geo_json(geo_json_path, huc_level=2, filter_str=''):
    
+    filter_attr = f'HUC{huc_level}'
     f_geo_json = {'type': 'FeatureCollection'}
     with open(geo_json_path, 'r') as gj:
         geo_json = json.load(gj)
     features = [i for i in geo_json['features'] if 
-                i['properties'][filter_attr][:2] == filter_str]
+                i['properties'][filter_attr][:len(filter_str)] == filter_str]
     f_geo_json['features'] = features
     
     return f_geo_json
 
-def filter_topo_json(topo_json, huc_level=2, filter_str='14'):
+def filter_topo_json(topo_json, huc_level=2, filter_str=''):
     
     geometries = topo_json['objects'][f'HUC{huc_level}']['geometries']
     geometries[:] = [i for i in geometries if 
