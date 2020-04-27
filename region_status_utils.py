@@ -182,17 +182,19 @@ def add_optional_tilesets(folium_map):
     for name, tileset in tilesets.items():
         folium.TileLayer(tileset, name=name).add_to(folium_map)
 
-def add_huc_layer(huc_map, level=2, huc_geojson_path=None, embed=False, show=True, filter_on=None):
+def add_huc_layer(huc_map, level=2, huc_geojson_path=None, embed=False, 
+                  show=True, huc_filter=None):
     try:
+        huc_filter = str(huc_filter)
         weight = -0.25 * float(level) + 2.5
         if not huc_geojson_path:
             huc_geojson_path = f'{STATIC_URL}/gis/HUC{level}.geojson'
         else:
             embed = True
-        if filter_on:
+        if huc_filter:
            huc_style = lambda x: {
             'fillColor': '#ffffff00', 'color': '#1f1f1faa', 
-            'weight': weight if x['properties'][f'HUC{level}'][:len(filter_on)] == filter_on else 0
+            'weight': weight if x['properties'][f'HUC{level}'][:len(huc_filter)] == huc_filter else 0
         } 
         else:
             huc_style = lambda x: {
@@ -303,7 +305,6 @@ def get_huc_nrcs_stats(huc_level='6'):
 def add_huc_chropleth(m, data_type='swe', show=False, huc_level='6', 
                       gis_path='gis', huc_filter='', use_topo=False):
     
-    huc_level = str(huc_level)
     huc_str = f'HUC{huc_level}'
     stat_type_dict = {'swe': 'Median', 'prec': 'Avg.'}
     stat_type = stat_type_dict.get(data_type, '')
@@ -312,13 +313,21 @@ def add_huc_chropleth(m, data_type='swe', show=False, huc_level='6',
         topo_json_path = path.join(gis_path, f'{huc_str}.topojson')
         with open(topo_json_path, 'r') as tj:
             topo_json = json.load(tj)
+        if huc_filter:
             topo_json = filter_topo_json(
                 topo_json, huc_level=huc_level, filter_str=huc_filter
             )
-    style_function = lambda feature: style_chropleth(
-        feature, data_type=data_type, huc_level=huc_level, huc_filter=huc_filter
+    style_function = lambda x: style_chropleth(
+        x, data_type=data_type, huc_level=huc_level, huc_filter=huc_filter
     )
-       
+    tooltip = folium.features.GeoJsonTooltip(
+        ['Name', f'{data_type}_percent', f'{data_type}_updt'],
+        aliases=['Basin Name:', f'{layer_name}:', 'Updated:']
+    )
+    # tooltip = folium.features.GeoJsonTooltip(
+    #     ['Name', f'{data_type}_percent', f'HUC{huc_level}'],
+    #     aliases=['Basin Name:', f'{layer_name}:', 'ID:']
+    # )
     if use_topo:
         folium.TopoJson(
             topo_json,
@@ -328,9 +337,7 @@ def add_huc_chropleth(m, data_type='swe', show=False, huc_level='6',
             show=show,
             smooth_factor=2.0,
             style_function=style_function,
-            tooltip=folium.features.GeoJsonTooltip(
-                ['Name', f'{data_type}_percent'],
-                aliases=['Basin Name:', f'{layer_name}:'])
+            tooltip=tooltip
         ).add_to(m)
     else:
         json_path = f'{STATIC_URL}/gis/HUC{huc_level}.geojson'
@@ -343,9 +350,7 @@ def add_huc_chropleth(m, data_type='swe', show=False, huc_level='6',
             smooth_factor=2.0,
             style_function=style_function,
             show=show,
-            tooltip=folium.features.GeoJsonTooltip(
-                ['Name', f'{data_type}_percent'],
-                aliases=['Basin Name:', f'{layer_name}:'])
+            tooltip=tooltip
         ).add_to(m)
 
 def style_chropleth(feature, data_type='swe', huc_level='2', huc_filter=''):
