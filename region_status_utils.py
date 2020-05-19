@@ -16,6 +16,7 @@ from shapely.geometry import Point
 from datetime import datetime
 from requests import get as r_get
 
+# STATIC_URL = r'http://127.0.0.1:8887'
 STATIC_URL = f'https://www.usbr.gov/uc/water/hydrodata/assets'
 NRCS_URL = r'https://www.nrcs.usda.gov/Internet/WCIS/basinCharts/POR'
 GIS_URL = r'https://www.usbr.gov/uc/water/hydrodata/assets/gis'
@@ -183,9 +184,10 @@ def add_optional_tilesets(folium_map):
         folium.TileLayer(tileset, name=name).add_to(folium_map)
 
 def add_huc_layer(huc_map, level=2, huc_geojson_path=None, embed=False, 
-                  show=True, huc_filter=None):
+                  show=True, huc_filter=''):
     try:
-        huc_filter = str(huc_filter)
+        if type(huc_filter) == int:
+            huc_filter = str(huc_filter)
         weight = -0.25 * float(level) + 2.5
         if not huc_geojson_path:
             huc_geojson_path = f'{STATIC_URL}/gis/HUC{level}.geojson'
@@ -194,7 +196,7 @@ def add_huc_layer(huc_map, level=2, huc_geojson_path=None, embed=False,
         if huc_filter:
            huc_style = lambda x: {
             'fillColor': '#ffffff00', 'color': '#1f1f1faa', 
-            'weight': weight if x['properties'][f'HUC{level}'][:len(huc_filter)] == huc_filter else 0
+            'weight': weight if x['properties'][f'HUC{level}'].startswith(huc_filter) else 0
         } 
         else:
             huc_style = lambda x: {
