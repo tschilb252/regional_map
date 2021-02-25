@@ -10,32 +10,27 @@ from datetime import datetime as dt
 from os import path, makedirs
 from requests import get as r_get
 import folium
-import branca
+#import branca
 import pandas as pd
-from folium.plugins import FloatImage, MousePosition
+from folium.plugins import FloatImage#, MousePosition
 from folium.features import DivIcon
 # import geopandas as gpd
 # from shapely.geometry import Point
 # from shapely.ops import cascaded_union
-from region_status_utils import get_fa_icon, get_icon_color, get_season
-from region_status_utils import add_optional_tilesets, add_huc_layer, get_huc
+from region_status_utils import get_season#, get_fa_icon, get_icon_color
+from region_status_utils import add_optional_tilesets, add_huc_layer#, get_huc
 from region_status_utils import get_favicon, get_bor_seal
-from region_status_utils import get_bor_js, get_bor_css, NRCS_URL
+from region_status_utils import NRCS_URL
 from region_status_utils import get_default_js, get_default_css
 from region_status_utils import get_nrcs_basin_stat, add_huc_chropleth
 from region_status_utils import get_huc_nrcs_stats, get_colormap
 from browser_print import BrowserPrint
 
-bor_js = get_bor_js()
-bor_css = get_bor_css()
-
 default_js = get_default_js()
 default_css = get_default_css()
 
-folium.folium._default_js = default_js
-folium.folium._default_css = default_css
-# folium.folium._default_js = bor_js
-# folium.folium._default_css = bor_css
+folium.folium.Map.default_js = default_js
+folium.folium.Map.default_css = default_css
 
 regions = {
     'Arkansas-White-Red': {
