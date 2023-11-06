@@ -97,7 +97,7 @@ reservoirs = {
         'coords': [37.004422, -119.690673], 'region': 'mp', 'anno': 1, 'cap': 520.5, 'id': 'mil'
     },
     'Flaming Gorge': {
-        'coords': [41.093419, -109.540657], 'region': 'uc', 'anno': 1, 'cap': 3749, 'id': 1718
+        'coords': [41.093419, -109.540657], 'region': 'uc', 'anno': 1, 'cap': 3671, 'id': 1718
     },
     'Lake Powell': {
         'coords': [37.068847, -111.243924], 'region': 'uc', 'anno':2, 'cap': 24322, 'id': 1719
